@@ -1,0 +1,6 @@
+2025-07-15 19:50:57,334 - data_ingestion - DEBUG - Data extraction started.
+2025-07-15 19:50:57,335 - data_ingestion - DEBUG - Authentication completed.
+2025-07-15 19:50:58,158 - data_ingestion - ERROR - Data extraction failed: http status: 404, code: -1 - https://api.spotify.com/v1/playlists/37i9dQZF1DXcBWIGoYBM5M/tracks?limit=100&offset=0&additional_types=track:
+ Resource not found, reason: None
+2025-07-15 19:50:58,159 - data_ingestion - ERROR - Main process failed: http status: 404, code: -1 - https://api.spotify.com/v1/playlists/37i9dQZF1DXcBWIGoYBM5M/tracks?limit=100&offset=0&additional_types=track:
+ Resource not found, reason: None
