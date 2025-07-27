@@ -10,8 +10,11 @@ import {
   where, 
   orderBy, 
   limit,
-  Timestamp 
+  Timestamp,
+  getDoc,
+  serverTimestamp
 } from 'firebase/firestore';
+import { auth } from '../firebase';
 
 export interface PlaylistTrack {
   id: string;
@@ -174,3 +177,123 @@ export async function getRecentlyPlayed(userId: string, limitCount: number = 20)
     throw new Error('Failed to get recently played tracks');
   }
 } 
+
+// Get all user playlists (updated version)
+export const getUserPlaylistsUpdated = async (): Promise<SavedPlaylist[]> => {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    const playlistsRef = collection(db, 'playlists');
+    const q = query(playlistsRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    
+    const playlists: SavedPlaylist[] = [];
+    querySnapshot.forEach((doc) => {
+      playlists.push({
+        id: doc.id,
+        ...doc.data()
+      } as SavedPlaylist);
+    });
+    
+    console.log(`✅ Retrieved ${playlists.length} playlists for user`);
+    return playlists;
+  } catch (error) {
+    console.error('❌ Error getting user playlists:', error);
+    throw error;
+  }
+};
+
+// Add song to existing playlist
+export const addSongToPlaylist = async (playlistId: string, song: PlaylistTrack): Promise<void> => {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    const playlistRef = doc(db, 'playlists', playlistId);
+    const playlistDoc = await getDoc(playlistRef);
+    
+    if (!playlistDoc.exists()) {
+      throw new Error('Playlist not found');
+    }
+
+    const playlistData = playlistDoc.data() as SavedPlaylist;
+    const existingTracks = playlistData.tracks || [];
+    
+    // Check if song already exists in playlist
+    const songExists = existingTracks.some(track => 
+      track.id === song.id || 
+      (track.title === song.title && track.artist === song.artist)
+    );
+    
+    if (songExists) {
+      throw new Error('Song already exists in playlist');
+    }
+
+    // Add song to playlist
+    const updatedTracks = [...existingTracks, song];
+    const updatedDuration = updatedTracks.reduce((total, track) => total + (track.duration || 0), 0);
+    
+    await updateDoc(playlistRef, {
+      tracks: updatedTracks,
+      duration: Math.round(updatedDuration / 60), // Convert to minutes
+      updatedAt: serverTimestamp()
+    });
+    
+    console.log(`✅ Added song "${song.title}" to playlist "${playlistData.name}"`);
+  } catch (error) {
+    console.error('❌ Error adding song to playlist:', error);
+    throw error;
+  }
+};
+
+// Add multiple songs to existing playlist
+export const addSongsToPlaylist = async (playlistId: string, songs: PlaylistTrack[]): Promise<void> => {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    const playlistRef = doc(db, 'playlists', playlistId);
+    const playlistDoc = await getDoc(playlistRef);
+    
+    if (!playlistDoc.exists()) {
+      throw new Error('Playlist not found');
+    }
+
+    const playlistData = playlistDoc.data() as SavedPlaylist;
+    const existingTracks = playlistData.tracks || [];
+    
+    // Filter out songs that already exist in playlist
+    const newSongs = songs.filter(song => 
+      !existingTracks.some(track => 
+        track.id === song.id || 
+        (track.title === song.title && track.artist === song.artist)
+      )
+    );
+    
+    if (newSongs.length === 0) {
+      throw new Error('All songs already exist in playlist');
+    }
+
+    // Add songs to playlist
+    const updatedTracks = [...existingTracks, ...newSongs];
+    const updatedDuration = updatedTracks.reduce((total, track) => total + (track.duration || 0), 0);
+    
+    await updateDoc(playlistRef, {
+      tracks: updatedTracks,
+      duration: Math.round(updatedDuration / 60), // Convert to minutes
+      updatedAt: serverTimestamp()
+    });
+    
+    console.log(`✅ Added ${newSongs.length} songs to playlist "${playlistData.name}"`);
+  } catch (error) {
+    console.error('❌ Error adding songs to playlist:', error);
+    throw error;
+  }
+}; 

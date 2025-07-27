@@ -35,238 +35,154 @@ router.get('/', [
     let songs = [];
     let totalSongs = 0;
 
-    // Try to get songs from external APIs first
-    try {
-                // Only get trending songs if no search term is provided
-          if (!search || search.length < 3) {
-            console.log('🌐 Getting trending songs from Deezer');
-            try {
-              const trendingResponse = await fetch(`https://api.deezer.com/chart/0/tracks?limit=300`);
-              if (trendingResponse.ok) {
-                const trendingData = await trendingResponse.json();
-                
-                if (trendingData.data && trendingData.data.length > 0) {
-                  const trendingSongs = trendingData.data.map(track => ({
-                    id: `deezer_trending_${track.id}`,
-                    name: track.title,
-                    artist: track.artist.name,
-                    artists: track.artist.name,
-                    album: track.album.title,
-                    albumArt: track.album.cover_medium,
-                    album_art_url: track.album.cover_medium,
-                    preview_url: track.preview,
-                    duration: track.duration,
-                    popularity: Math.floor(Math.random() * 30) + 70,
-                    playCount: Math.floor(Math.random() * 100000) + 10000,
-                    likeCount: Math.floor(Math.random() * 10000) + 1000,
-                    source: 'deezer_trending',
-                    isActive: true,
-                    mood: ['popular', 'trending'],
-                    genre: ['pop'],
-                    createdAt: new Date().toISOString()
-                  }));
-                  songs.push(...trendingSongs);
-                  console.log(`✅ Found ${trendingSongs.length} trending songs from Deezer`);
-                }
-              } else {
-                console.log('⚠️ Deezer trending API failed, continuing with other sources');
-              }
-            } catch (trendingError) {
-              console.log('⚠️ Deezer trending API failed, continuing with other sources');
-            }
+    // Search for songs using iTunes API
+    if (search && search.length >= 1) {
+      console.log('🌐 Searching for songs:', search);
+      
+      try {
+        // Try the exact search term first
+        const apiUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(search)}&media=music&entity=song&limit=50`;
+        console.log(`🔗 Trying iTunes API: ${apiUrl}`);
+        
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
           }
-
-      // Search Deezer API for songs (only if search term is 2+ characters)
-      if (search && search.length >= 2) {
-        console.log('🌐 Searching Deezer API for:', search);
+        });
         
-        // Try multiple search variations to get more relevant results
-        const searchVariations = [
-          search,
-          `${search} music`,
-          `${search} song`,
-          `${search} artist`,
-          search.split(' ').slice(0, 2).join(' '), // First 2 words if multiple words
-          search + ' track',
-          search + ' hit',
-          search + ' popular'
-        ];
-        
-        let deezerSongsFound = false;
-        
-        for (const searchTerm of searchVariations) {
-          if (deezerSongsFound) break; // Stop if we found songs from Deezer
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`📊 iTunes response for "${search}":`, JSON.stringify(data, null, 2).substring(0, 500) + '...');
           
-          try {
-            const deezerResponse = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(searchTerm)}&limit=200`);
-            if (deezerResponse.ok) {
-              const deezerData = await deezerResponse.json();
-              
-              if (deezerData.data && deezerData.data.length > 0) {
-                // Use all results from Deezer search
-                console.log(`✅ Using ${deezerData.data.length} songs from Deezer for "${search}"`);
-                const deezerSongs = deezerData.data.map(track => ({
-                  id: `deezer_search_${track.id}`,
-                  name: track.title,
-                  artist: track.artist.name,
-                  artists: track.artist.name,
-                  album: track.album.title,
-                  albumArt: track.album.cover_medium,
-                  album_art_url: track.album.cover_medium,
-                  preview_url: track.preview,
-                  duration: track.duration,
-                  popularity: Math.floor(Math.random() * 30) + 70,
-                  playCount: Math.floor(Math.random() * 50000) + 1000,
-                  likeCount: Math.floor(Math.random() * 5000) + 100,
-                  source: 'deezer_search',
-                  isActive: true,
-                  mood: ['energetic', 'upbeat'],
-                  genre: ['pop'],
-                  createdAt: new Date().toISOString()
-                }));
-                songs.push(...deezerSongs);
-                deezerSongsFound = true;
-                break;
-              }
-            }
-          } catch (error) {
-            console.log(`⚠️ Deezer search failed for "${searchTerm}", trying next variation`);
-          }
-        }
-        
-        if (!deezerSongsFound) {
-          console.log('⚠️ No songs found from Deezer search variations');
-        }
-      }
-
-      // Search Jamendo API for additional songs (only if search term is 2+ characters)
-      if (search && search.length >= 2) {
-        console.log('🌐 Searching Jamendo API for:', search);
-        
-        // Try multiple search variations for Jamendo too
-        const searchVariations = [
-          search,
-          `${search} music`,
-          `${search} song`,
-          `${search} artist`,
-          search.split(' ').slice(0, 2).join(' '), // First 2 words if multiple words
-          search + ' track',
-          search + ' hit',
-          search + ' popular'
-        ];
-        
-        let jamendoSongsFound = false;
-        
-        for (const searchTerm of searchVariations) {
-          if (jamendoSongsFound) break; // Stop if we found songs from Jamendo
-          
-          try {
-            const jamendoResponse = await fetch(`https://api.jamendo.com/v3/tracks/?client_id=${process.env.JAMENDO_CLIENT_ID || '2d652c8c'}&format=json&limit=200&search=${encodeURIComponent(searchTerm)}`);
-            if (jamendoResponse.ok) {
-              const jamendoData = await jamendoResponse.json();
-              
-              if (jamendoData.results && jamendoData.results.length > 0) {
-                // Use all results from Jamendo search
-                console.log(`✅ Using ${jamendoData.results.length} songs from Jamendo for "${search}"`);
-                const jamendoSongs = jamendoData.results.map(track => ({
-                  id: `jamendo_search_${track.id}`,
-                  name: track.name,
-                  artist: track.artist_name,
-                  artists: track.artist_name,
-                  album: track.album_name || 'Unknown Album',
-                  albumArt: track.image,
-                  album_art_url: track.image,
-                  preview_url: track.audio,
-                  duration: track.duration,
-                  popularity: Math.floor(Math.random() * 30) + 70,
-                  playCount: Math.floor(Math.random() * 50000) + 1000,
-                  likeCount: Math.floor(Math.random() * 5000) + 100,
-                  source: 'jamendo_search',
-                  isActive: true,
-                  mood: ['energetic', 'upbeat'],
-                  genre: ['pop'],
-                  createdAt: new Date().toISOString()
-                }));
-                songs.push(...jamendoSongs);
-                jamendoSongsFound = true;
-                break;
-              }
-            }
-          } catch (error) {
-            console.log(`⚠️ Jamendo search failed for "${searchTerm}", trying next variation`);
-          }
-        }
-        
-        if (!jamendoSongsFound) {
-          console.log('⚠️ No songs found from Jamendo search variations');
-        }
-      }
-
-      // Only get trending songs if we have NO search results at all
-      if (songs.length === 0) {
-        console.log('🌐 No search results found, getting trending songs as fallback');
-        try {
-          const trendingResponse = await fetch('https://api.deezer.com/chart/0/tracks?limit=50');
-          if (trendingResponse.ok) {
-            const trendingData = await trendingResponse.json();
+          if (data.results && data.results.length > 0) {
+            console.log(`✅ Found ${data.results.length} songs from iTunes for "${search}"`);
+            const itunesSongs = data.results.map(track => ({
+              id: `itunes_search_${track.trackId}`,
+              name: track.trackName,
+              artist: track.artistName,
+              artists: track.artistName,
+              album: track.collectionName,
+              albumArt: track.artworkUrl100,
+              album_art_url: track.artworkUrl100,
+              preview_url: track.previewUrl,
+              duration: Math.round(track.trackTimeMillis / 1000),
+              popularity: Math.floor(Math.random() * 30) + 70,
+              playCount: Math.floor(Math.random() * 50000) + 1000,
+              likeCount: Math.floor(Math.random() * 5000) + 100,
+              source: 'itunes_search',
+              isActive: true,
+              mood: ['energetic', 'upbeat'],
+              genre: [track.primaryGenreName || 'pop'],
+              createdAt: new Date().toISOString()
+            }));
             
-            if (trendingData.data && trendingData.data.length > 0) {
-              const trendingSongs = trendingData.data.map(track => ({
-                id: `deezer_trending_${track.id}`,
-                name: track.title,
-                artist: track.artist.name,
-                artists: track.artist.name,
-                album: track.album.title,
-                albumArt: track.album.cover_medium,
-                album_art_url: track.album.cover_medium,
-                preview_url: track.preview,
-                duration: track.duration,
-                popularity: Math.floor(Math.random() * 30) + 70,
-                playCount: Math.floor(Math.random() * 100000) + 10000,
-                likeCount: Math.floor(Math.random() * 10000) + 1000,
-                source: 'deezer_trending',
-                isActive: true,
-                mood: ['popular', 'trending'],
-                genre: ['pop'],
-                createdAt: new Date().toISOString()
-              }));
-              songs.push(...trendingSongs);
-              console.log(`✅ Found ${trendingSongs.length} trending songs as fallback`);
-            }
+            // Return the search results immediately
+            console.log(`🎵 Returning ${itunesSongs.length} search results for "${search}"`);
+            return res.status(200).json({
+              status: 'success',
+              message: 'Songs retrieved successfully',
+              data: {
+                songs: itunesSongs,
+                total: itunesSongs.length,
+                limit: parseInt(limit),
+                skip: skip
+              }
+            });
           } else {
-            console.log('⚠️ Deezer trending API failed');
+            console.log(`❌ No results from iTunes for "${search}"`);
           }
-        } catch (trendingError) {
-          console.log('⚠️ Deezer trending API failed');
+        } else {
+          console.log(`❌ iTunes API error for "${search}": ${response.status} - ${response.statusText}`);
         }
+      } catch (error) {
+        console.log(`⚠️ iTunes search failed for "${search}":`, error.message);
       }
-
-    } catch (apiError) {
-      console.error('❌ API search failed:', apiError.message);
-      console.log('⚠️ APIs failed, using fallback songs');
+      
+      // If we get here, search failed - return empty results
+      console.log(`❌ No search results found for "${search}", returning empty results`);
+      return res.status(200).json({
+        status: 'success',
+        message: 'No songs found for search term',
+        data: {
+          songs: [],
+          total: 0,
+          limit: parseInt(limit),
+          skip: skip
+        }
+      });
     }
 
-    // If we got songs from APIs, use them
+    // Only get trending songs if no search term provided
+    if (!search) {
+      console.log('🌐 No search term provided, getting trending songs from Deezer');
+      
+      try {
+        const trendingResponse = await fetch(`https://api.deezer.com/chart/0/tracks?limit=50`);
+        if (trendingResponse.ok) {
+          const trendingData = await trendingResponse.json();
+          
+          if (trendingData.data && trendingData.data.length > 0) {
+            const trendingSongs = trendingData.data.map(track => ({
+              id: `deezer_trending_${track.id}`,
+              name: track.title,
+              artist: track.artist.name,
+              artists: track.artist.name,
+              album: track.album.title,
+              albumArt: track.album.cover_medium,
+              album_art_url: track.album.cover_medium,
+              preview_url: track.preview,
+              duration: track.duration,
+              popularity: Math.floor(Math.random() * 30) + 70,
+              playCount: Math.floor(Math.random() * 100000) + 10000,
+              likeCount: Math.floor(Math.random() * 10000) + 1000,
+              source: 'deezer_trending',
+              isActive: true,
+              mood: ['popular', 'trending'],
+              genre: ['pop'],
+              createdAt: new Date().toISOString()
+            }));
+            songs.push(...trendingSongs);
+            console.log(`✅ Found ${trendingSongs.length} trending songs`);
+          }
+        } else {
+          console.log('⚠️ Deezer trending API failed, continuing with other sources');
+        }
+      } catch (trendingError) {
+        console.log('⚠️ Deezer trending API failed, continuing with other sources');
+      }
+    }
+
+    // Remove duplicates based on title and artist
+    const uniqueSongs = songs.filter((song, index, self) => 
+      index === self.findIndex(s => 
+        s.name.toLowerCase() === song.name.toLowerCase() && 
+        s.artist.toLowerCase() === song.artist.toLowerCase()
+      )
+    );
+    
+    songs = uniqueSongs;
+    console.log(`🎵 Total unique search results: ${songs.length}`);
+
+    // Return the results
     if (songs.length > 0) {
       totalSongs = songs.length;
-      // Don't slice - return all songs
-      // songs = songs.slice(skip, skip + parseInt(limit));
-      
       console.log(`🎵 Returning ${songs.length} songs from APIs (total: ${totalSongs})`);
       
       return res.status(200).json({
-      status: 'success',
+        status: 'success',
         message: 'Songs retrieved successfully',
-      data: {
-        songs,
-        pagination: {
+        data: {
+          songs,
+          pagination: {
             current: 1,
             total: 1,
             limit: totalSongs,
             skip: 0,
             totalSongs
-        },
-        filters: {
+          },
+          filters: {
             search: search || '',
             mood: mood || '',
             genre: genre || ''
@@ -276,137 +192,185 @@ router.get('/', [
       });
     }
 
-    // Final fallback: Get trending songs if no songs found
-    console.log('⚠️ No songs found from search, getting trending songs as final fallback');
-    try {
-      // Try to get songs that might be related to the search term
-      let fallbackSongs = [];
-      
-      if (search && search.length > 0) {
-        // Try to get popular songs that might contain similar words
-        const trendingResponse = await fetch(`https://api.deezer.com/chart/0/tracks?limit=300`);
-        if (trendingResponse.ok) {
-          const trendingData = await trendingResponse.json();
-          if (trendingData.data && trendingData.data.length > 0) {
-            // Filter trending songs to find ones that might be related
-            const searchLower = search.toLowerCase();
-            const relatedSongs = trendingData.data.filter(track => {
-              const trackTitle = track.title.toLowerCase();
-              const trackArtist = track.artist.name.toLowerCase();
-              const trackAlbum = track.album.title.toLowerCase();
-              
-              // Check if any part of the search term appears in the song info
-              return trackTitle.includes(searchLower) || 
-                     trackArtist.includes(searchLower) ||
-                     trackAlbum.includes(searchLower) ||
-                     searchLower.split(' ').some(word => 
-                       trackTitle.includes(word) || 
-                       trackArtist.includes(word) || 
-                       trackAlbum.includes(word)
-                     );
-            });
-            
-            if (relatedSongs.length > 0) {
-              fallbackSongs = relatedSongs.slice(0, 50); // Limit to 50 related songs
-              console.log(`✅ Found ${fallbackSongs.length} related trending songs for "${search}"`);
-            } else {
-              // If no related songs found, use all trending songs
-              fallbackSongs = trendingData.data.slice(0, 50);
-              console.log(`✅ Using ${fallbackSongs.length} trending songs as fallback for "${search}"`);
-            }
-          }
-        }
-      } else {
-        // If no search term, just get trending songs
-        const trendingResponse = await fetch(`https://api.deezer.com/chart/0/tracks?limit=300`);
-        if (trendingResponse.ok) {
-          const trendingData = await trendingResponse.json();
-          if (trendingData.data && trendingData.data.length > 0) {
-            fallbackSongs = trendingData.data.slice(0, 50);
-            console.log(`✅ Using ${fallbackSongs.length} trending songs as fallback`);
-          }
-        }
-      }
-      
-      if (fallbackSongs.length > 0) {
-        const trendingSongs = fallbackSongs.map(track => ({
-          id: `deezer_trending_fallback_${track.id}`,
-          name: track.title,
-          artist: track.artist.name,
-          artists: track.artist.name,
-          album: track.album.title,
-          albumArt: track.album.cover_medium,
-          album_art_url: track.album.cover_medium,
-          preview_url: track.preview,
-          duration: track.duration,
-          popularity: Math.floor(Math.random() * 30) + 70,
-          playCount: Math.floor(Math.random() * 50000) + 1000,
-          likeCount: Math.floor(Math.random() * 5000) + 100,
-          source: 'deezer_trending_fallback',
-          isActive: true,
-          mood: ['energetic', 'upbeat'],
-          genre: ['pop'],
-          createdAt: new Date().toISOString()
-        }));
-        
-        songs = trendingSongs;
-        totalSongs = songs.length;
-        
-        console.log(`🎵 Returning ${songs.length} fallback songs (total: ${totalSongs})`);
-        
-        return res.status(200).json({
-          status: 'success',
-          message: 'Songs retrieved successfully',
-          data: {
-            songs,
-            pagination: {
-              current: 1,
-              total: 1,
-              limit: totalSongs,
-              skip: 0,
-              totalSongs
-            },
-            filters: {
-              search: search || '',
-              mood: mood || '',
-              genre: genre || ''
-            },
-            source: 'api_fallback'
-          }
-        });
-      }
-    } catch (error) {
-      console.log('⚠️ Failed to get trending songs as final fallback');
-    }
-
-    // No songs found at all
-    console.log('⚠️ All APIs failed, returning empty results');
-    
-    songs = [];
-    totalSongs = 0;
-
-    console.log(`🎵 No real songs found from APIs`);
-    
-    res.status(200).json({
+    // Final fallback: return empty results
+    console.log('⚠️ No songs found, returning empty results');
+    return res.status(200).json({
       status: 'success',
-      message: 'Songs retrieved successfully',
+      message: 'No songs found',
       data: {
-        songs,
-        pagination: {
+        songs: [],
+        total: 0,
+        limit: parseInt(limit),
+        skip: skip
+      }
+    });
+
+  } catch (apiError) {
+    console.error('❌ API search failed:', apiError.message);
+    console.log('⚠️ APIs failed, using fallback songs');
+  }
+
+  // If we got songs from APIs, use them
+  if (songs.length > 0) {
+    totalSongs = songs.length;
+    // Don't slice - return all songs
+    // songs = songs.slice(skip, skip + parseInt(limit));
+    
+    console.log(`🎵 Returning ${songs.length} songs from APIs (total: ${totalSongs})`);
+    
+    return res.status(200).json({
+    status: 'success',
+      message: 'Songs retrieved successfully',
+    data: {
+      songs,
+      pagination: {
           current: 1,
           total: 1,
           limit: totalSongs,
           skip: 0,
           totalSongs
-        },
-        filters: {
+      },
+      filters: {
           search: search || '',
           mood: mood || '',
           genre: genre || ''
         },
-        source: 'fallback'
+        source: 'api'
       }
     });
+  }
+
+  // Final fallback: Get trending songs if no songs found
+  console.log('⚠️ No songs found from search, getting trending songs as final fallback');
+  try {
+    // Try to get songs that might be related to the search term
+    let fallbackSongs = [];
+    
+    if (search && search.length > 0) {
+      // Try to get popular songs that might contain similar words
+      const trendingResponse = await fetch(`https://api.deezer.com/chart/0/tracks?limit=300`);
+      if (trendingResponse.ok) {
+        const trendingData = await trendingResponse.json();
+        if (trendingData.data && trendingData.data.length > 0) {
+          // Filter trending songs to find ones that might be related
+          const searchLower = search.toLowerCase();
+          const relatedSongs = trendingData.data.filter(track => {
+            const trackTitle = track.title.toLowerCase();
+            const trackArtist = track.artist.name.toLowerCase();
+            const trackAlbum = track.album.title.toLowerCase();
+            
+            // Check if any part of the search term appears in the song info
+            return trackTitle.includes(searchLower) || 
+                   trackArtist.includes(searchLower) ||
+                   trackAlbum.includes(searchLower) ||
+                   searchLower.split(' ').some(word => 
+                     trackTitle.includes(word) || 
+                     trackArtist.includes(word) || 
+                     trackAlbum.includes(word)
+                   );
+          });
+          
+          if (relatedSongs.length > 0) {
+            fallbackSongs = relatedSongs.slice(0, 50); // Limit to 50 related songs
+            console.log(`✅ Found ${fallbackSongs.length} related trending songs for "${search}"`);
+          } else {
+            // If no related songs found, use all trending songs
+            fallbackSongs = trendingData.data.slice(0, 50);
+            console.log(`✅ Using ${fallbackSongs.length} trending songs as fallback for "${search}"`);
+          }
+        }
+      }
+    } else {
+      // If no search term, just get trending songs
+      const trendingResponse = await fetch(`https://api.deezer.com/chart/0/tracks?limit=300`);
+      if (trendingResponse.ok) {
+        const trendingData = await trendingResponse.json();
+        if (trendingData.data && trendingData.data.length > 0) {
+          fallbackSongs = trendingData.data.slice(0, 50);
+          console.log(`✅ Using ${fallbackSongs.length} trending songs as fallback`);
+        }
+      }
+    }
+    
+    if (fallbackSongs.length > 0) {
+      const trendingSongs = fallbackSongs.map(track => ({
+        id: `deezer_trending_fallback_${track.id}`,
+        name: track.title,
+        artist: track.artist.name,
+        artists: track.artist.name,
+        album: track.album.title,
+        albumArt: track.album.cover_medium,
+        album_art_url: track.album.cover_medium,
+        preview_url: track.preview,
+        duration: track.duration,
+        popularity: Math.floor(Math.random() * 30) + 70,
+        playCount: Math.floor(Math.random() * 50000) + 1000,
+        likeCount: Math.floor(Math.random() * 5000) + 100,
+        source: 'deezer_trending_fallback',
+        isActive: true,
+        mood: ['energetic', 'upbeat'],
+        genre: ['pop'],
+        createdAt: new Date().toISOString()
+      }));
+      
+      songs = trendingSongs;
+      totalSongs = songs.length;
+      
+      console.log(`🎵 Returning ${songs.length} fallback songs (total: ${totalSongs})`);
+      
+      return res.status(200).json({
+        status: 'success',
+        message: 'Songs retrieved successfully',
+        data: {
+          songs,
+          pagination: {
+            current: 1,
+            total: 1,
+            limit: totalSongs,
+            skip: 0,
+            totalSongs
+          },
+          filters: {
+            search: search || '',
+            mood: mood || '',
+            genre: genre || ''
+          },
+          source: 'api_fallback'
+        }
+      });
+    }
+  } catch (error) {
+    console.log('⚠️ Failed to get trending songs as final fallback');
+  }
+
+  // No songs found at all
+  console.log('⚠️ All APIs failed, returning empty results');
+  
+  songs = [];
+  totalSongs = 0;
+
+  console.log(`🎵 No real songs found from APIs`);
+  
+  res.status(200).json({
+    status: 'success',
+    message: 'Songs retrieved successfully',
+    data: {
+      songs,
+      pagination: {
+        current: 1,
+        total: 1,
+        limit: totalSongs,
+        skip: 0,
+        totalSongs
+      },
+      filters: {
+        search: search || '',
+        mood: mood || '',
+        genre: genre || ''
+      },
+      source: 'fallback'
+    }
+  });
 
   } catch (error) {
     console.error('❌ Error fetching songs:', error.message);
@@ -503,6 +467,159 @@ function getFallbackSongs(searchTerm = '', limit = 20) {
   }
   
   return songs;
+}
+
+// Helper function to get popular songs from local database
+function getPopularSongsFromDatabase(searchTerm) {
+  const searchLower = searchTerm.toLowerCase();
+  const popularSongs = [
+    {
+      id: 'popular_1',
+      name: 'Blinding Lights',
+      artist: 'The Weeknd',
+      artists: 'The Weeknd',
+      album: 'After Hours',
+      albumArt: 'https://is1-ssl.mzstatic.com/image/thumb/Music123/v4/73/6d/8c/736d8c1b-8f5a-8f5a-8f5a-8f5a8f5a8f5a/20UM1IM24801.rgb.jpg/100x100bb.jpg',
+      album_art_url: 'https://is1-ssl.mzstatic.com/image/thumb/Music123/v4/73/6d/8c/736d8c1b-8f5a-8f5a-8f5a-8f5a8f5a8f5a/20UM1IM24801.rgb.jpg/100x100bb.jpg',
+      preview_url: null,
+      duration: 200,
+      popularity: 95,
+      playCount: 2500000,
+      likeCount: 150000,
+      source: 'popular_database',
+      isActive: true,
+      mood: ['energetic', 'upbeat'],
+      genre: ['pop'],
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'popular_2',
+      name: 'Shape of You',
+      artist: 'Ed Sheeran',
+      artists: 'Ed Sheeran',
+      album: '÷ (Divide)',
+      albumArt: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/8c/e8/85/8ce88585-8f5a-8f5a-8f5a-8f5a8f5a8f5a/20UM1IM24801.rgb.jpg/100x100bb.jpg',
+      album_art_url: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/8c/e8/85/8ce88585-8f5a-8f5a-8f5a-8f5a8f5a8f5a/20UM1IM24801.rgb.jpg/100x100bb.jpg',
+      preview_url: null,
+      duration: 233,
+      popularity: 92,
+      playCount: 2200000,
+      likeCount: 120000,
+      source: 'popular_database',
+      isActive: true,
+      mood: ['energetic', 'upbeat'],
+      genre: ['pop'],
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'popular_3',
+      name: 'Dance Monkey',
+      artist: 'Tones and I',
+      artists: 'Tones and I',
+      album: 'The Kids Are Coming',
+      albumArt: 'https://is1-ssl.mzstatic.com/image/thumb/Music113/v4/8c/e8/85/8ce88585-8f5a-8f5a-8f5a-8f5a8f5a8f5a/20UM1IM24801.rgb.jpg/100x100bb.jpg',
+      album_art_url: 'https://is1-ssl.mzstatic.com/image/thumb/Music113/v4/8c/e8/85/8ce88585-8f5a-8f5a-8f5a-8f5a8f5a8f5a/20UM1IM24801.rgb.jpg/100x100bb.jpg',
+      preview_url: null,
+      duration: 210,
+      popularity: 88,
+      playCount: 1800000,
+      likeCount: 95000,
+      source: 'popular_database',
+      isActive: true,
+      mood: ['energetic', 'upbeat'],
+      genre: ['pop'],
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'popular_4',
+      name: 'Bad Guy',
+      artist: 'Billie Eilish',
+      artists: 'Billie Eilish',
+      album: 'When We All Fall Asleep, Where Do We Go?',
+      albumArt: 'https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/8c/e8/85/8ce88585-8f5a-8f5a-8f5a-8f5a8f5a8f5a/20UM1IM24801.rgb.jpg/100x100bb.jpg',
+      album_art_url: 'https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/8c/e8/85/8ce88585-8f5a-8f5a-8f5a-8f5a8f5a8f5a/20UM1IM24801.rgb.jpg/100x100bb.jpg',
+      preview_url: null,
+      duration: 194,
+      popularity: 90,
+      playCount: 2000000,
+      likeCount: 110000,
+      source: 'popular_database',
+      isActive: true,
+      mood: ['dark', 'mysterious'],
+      genre: ['pop'],
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'popular_5',
+      name: 'Levitating',
+      artist: 'Dua Lipa',
+      artists: 'Dua Lipa',
+      album: 'Future Nostalgia',
+      albumArt: 'https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/8c/e8/85/8ce88585-8f5a-8f5a-8f5a-8f5a8f5a8f5a/20UM1IM24801.rgb.jpg/100x100bb.jpg',
+      album_art_url: 'https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/8c/e8/85/8ce88585-8f5a-8f5a-8f5a-8f5a8f5a8f5a/20UM1IM24801.rgb.jpg/100x100bb.jpg',
+      preview_url: null,
+      duration: 203,
+      popularity: 87,
+      playCount: 1600000,
+      likeCount: 85000,
+      source: 'popular_database',
+      isActive: true,
+      mood: ['energetic', 'upbeat'],
+      genre: ['pop'],
+      createdAt: new Date().toISOString()
+    }
+  ];
+
+  // Filter songs that match the search term
+  return popularSongs.filter(song => 
+    song.name.toLowerCase().includes(searchLower) ||
+    song.artist.toLowerCase().includes(searchLower) ||
+    song.album.toLowerCase().includes(searchLower)
+  );
+}
+
+// Helper function to get general popular songs
+function getGeneralPopularSongs() {
+  return [
+    {
+      id: 'general_1',
+      name: 'Blinding Lights',
+      artist: 'The Weeknd',
+      artists: 'The Weeknd',
+      album: 'After Hours',
+      albumArt: 'https://is1-ssl.mzstatic.com/image/thumb/Music123/v4/73/6d/8c/736d8c1b-8f5a-8f5a-8f5a-8f5a8f5a8f5a/20UM1IM24801.rgb.jpg/100x100bb.jpg',
+      album_art_url: 'https://is1-ssl.mzstatic.com/image/thumb/Music123/v4/73/6d/8c/736d8c1b-8f5a-8f5a-8f5a-8f5a8f5a8f5a/20UM1IM24801.rgb.jpg/100x100bb.jpg',
+      preview_url: null,
+      duration: 200,
+      popularity: 95,
+      playCount: 2500000,
+      likeCount: 150000,
+      source: 'general_popular',
+      isActive: true,
+      mood: ['energetic', 'upbeat'],
+      genre: ['pop'],
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'general_2',
+      name: 'Shape of You',
+      artist: 'Ed Sheeran',
+      artists: 'Ed Sheeran',
+      album: '÷ (Divide)',
+      albumArt: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/8c/e8/85/8ce88585-8f5a-8f5a-8f5a-8f5a8f5a8f5a/20UM1IM24801.rgb.jpg/100x100bb.jpg',
+      album_art_url: 'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/8c/e8/85/8ce88585-8f5a-8f5a-8f5a-8f5a8f5a8f5a/20UM1IM24801.rgb.jpg/100x100bb.jpg',
+      preview_url: null,
+      duration: 233,
+      popularity: 92,
+      playCount: 2200000,
+      likeCount: 120000,
+      source: 'general_popular',
+      isActive: true,
+      mood: ['energetic', 'upbeat'],
+      genre: ['pop'],
+      createdAt: new Date().toISOString()
+    }
+  ];
 }
 
 // GET /api/songs/:songId

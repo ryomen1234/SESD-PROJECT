@@ -170,59 +170,112 @@ router.post('/feedback', [
 // GET /api/recommendations/song/:id - Get song-based recommendations
 router.get('/song/:id', [
   param('id').notEmpty().withMessage('Song ID is required'),
-  query('limit').optional().isInt({ min: 1, max: 20 }).withMessage('Limit must be between 1 and 20'),
+  query('limit').optional().isInt({ min: 1, max: 50 }).withMessage('Limit must be between 1 and 50'),
   handleValidationErrors
 ], async (req, res) => {
   try {
     const { id } = req.params;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 20; // Increased default limit
 
     console.log(`🎵 Song-based recommendation request: song_id=${id}, limit=${limit}`);
     
-    // Get similar tracks using our music service
+    // Get similar tracks using Deezer API for better recommendations and playback
     let recommendations = [];
     
     try {
-      // Try to get similar tracks from Deezer using different search strategies
-      const searchTerms = [
-        'popular',
-        'trending',
-        'new releases',
-        'top hits',
-        'chart',
-        'viral',
-        'featured'
-      ];
+      // Extract song info from the ID to get better recommendations
+      const songIdParts = id.split('_');
+      const actualId = songIdParts[songIdParts.length - 1];
       
-      // Get recommendations from multiple sources for variety
-      for (const searchTerm of searchTerms.slice(0, 3)) {
+      // Try to get the original song info first to base recommendations on it
+      let originalSong = null;
+      try {
+        // Try iTunes first to get song details
+        const songResponse = await fetch(`https://itunes.apple.com/lookup?id=${actualId}`);
+        const songData = await songResponse.json();
+        if (songData.results && songData.results.length > 0) {
+          originalSong = songData.results[0];
+          console.log(`📝 Original song: ${originalSong.artistName} - ${originalSong.trackName}`);
+        }
+      } catch (e) {
+        console.log('Could not fetch original song info, proceeding with generic recommendations');
+      }
+      
+      // Generate search terms based on the original song for better recommendations
+      let searchTerms = [];
+      
+      if (originalSong) {
+        // Use artist name and genre for better recommendations
+        const artistName = originalSong.artistName || '';
+        const genre = originalSong.primaryGenreName || '';
+        
+        searchTerms = [
+          artistName, // Same artist
+          `${artistName} ${genre}`, // Same artist + genre
+          genre, // Same genre
+          'popular', // Popular songs
+          'trending', // Trending songs
+          'top hits', // Top hits
+          'viral', // Viral songs
+          'featured' // Featured songs
+        ].filter(term => term && term.length > 0);
+      } else {
+        // Use diverse search terms for variety
+        searchTerms = [
+          'popular',
+          'trending', 
+          'new releases',
+          'top hits',
+          'viral',
+          'featured',
+          'chart',
+          'hot'
+        ];
+      }
+      
+      console.log(`🔍 Search terms: ${searchTerms.join(', ')}`);
+      
+      // Get recommendations from Deezer API for better playback capability
+      for (const searchTerm of searchTerms.slice(0, 6)) { // Increased to 6 search terms
         try {
-          const similarTracks = await musicService.searchTracks(searchTerm, Math.ceil(limit / 3));
+          console.log(`🔍 Searching Deezer for recommendations: "${searchTerm}"`);
+          const response = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(searchTerm)}&limit=${Math.ceil(limit / 6)}`);
+          const data = await response.json();
           
-          if (similarTracks && similarTracks.length > 0) {
-            const mappedTracks = similarTracks.map((track, index) => ({
-              id: track.id || `rec_${Date.now()}_${searchTerm}_${index}`,
-              title: track.title || track.name || 'Recommended Song',
+          console.log(`📊 Deezer response for "${searchTerm}":`, { 
+            total: data.total, 
+            results: data.data ? data.data.length : 0 
+          });
+          
+          if (data.data && data.data.length > 0) {
+            const mappedTracks = data.data.map((track, index) => ({
+              id: track.id || `deezer_rec_${Date.now()}_${searchTerm}_${index}`,
+              title: track.title || 'Recommended Song',
               artist: {
-                id: track.artist?.id || 'unknown',
-                name: track.artist?.name || track.artist || 'Unknown Artist'
+                id: track.artist.id || 'unknown',
+                name: track.artist.name || 'Unknown Artist'
               },
               album: {
-                id: track.album?.id || 'unknown',
-                title: track.album?.title || track.album || 'Unknown Album',
-                cover_medium: track.album?.cover_medium || track.album?.cover || track.image || `https://picsum.photos/300/300?random=${searchTerm}_${index}`
+                id: track.album.id || 'unknown',
+                title: track.album.title || 'Unknown Album',
+                cover_medium: track.album.cover_medium || `https://picsum.photos/300/300?random=${searchTerm}_${index}`
               },
               duration: track.duration || 210,
-              preview: track.preview || track.preview_url || null,
+              preview: track.preview || null,
               link: track.link,
-              image: track.album?.cover_medium || track.album?.cover || track.image || `https://picsum.photos/300/300?random=${searchTerm}_${index}`,
-              source: `deezer_${searchTerm}`
+              image: track.album.cover_medium || `https://picsum.photos/300/300?random=${searchTerm}_${index}`,
+              source: `deezer_${searchTerm}`,
+              // Add Deezer-specific fields for playback
+              deezer_id: track.id,
+              deezer_url: track.link,
+              preview_url: track.preview
             }));
             
             recommendations.push(...mappedTracks);
+            console.log(`✅ Found ${mappedTracks.length} Deezer recommendations from "${searchTerm}"`);
           }
         } catch (apiError) {
-          console.warn(`❌ API search failed for "${searchTerm}":`, apiError.message);
+          console.warn(`❌ Deezer search failed for "${searchTerm}":`, apiError.message);
         }
       }
       
@@ -234,15 +287,51 @@ router.get('/song/:id', [
         )
       );
       
-      recommendations = uniqueRecommendations;
+      console.log(`🎵 Total unique recommendations before limit: ${uniqueRecommendations.length}`);
+      recommendations = uniqueRecommendations.slice(0, limit);
       
     } catch (apiError) {
-      console.warn('❌ API search failed for recommendations:', apiError.message);
+      console.warn('❌ Deezer API search failed for recommendations:', apiError.message);
     }
     
-    // If no recommendations from API, use diverse fallback
+    // If no recommendations from Deezer, use diverse fallback with Deezer trending
     if (recommendations.length === 0) {
-      console.log('🔄 Using diverse fallback recommendations');
+      console.log('🔄 Using Deezer trending as fallback recommendations');
+      try {
+        const trendingResponse = await fetch('https://api.deezer.com/chart/0/tracks?limit=30');
+        const trendingData = await trendingResponse.json();
+        
+        if (trendingData.data && trendingData.data.length > 0) {
+          recommendations = trendingData.data.slice(0, limit).map((track, index) => ({
+            id: track.id || `deezer_trending_${index}`,
+            title: track.title || 'Trending Song',
+            artist: {
+              id: track.artist.id || 'unknown',
+              name: track.artist.name || 'Unknown Artist'
+            },
+            album: {
+              id: track.album.id || 'unknown',
+              title: track.album.title || 'Unknown Album',
+              cover_medium: track.album.cover_medium || `https://picsum.photos/300/300?random=trending_${index}`
+            },
+            duration: track.duration || 210,
+            preview: track.preview || null,
+            link: track.link,
+            image: track.album.cover_medium || `https://picsum.photos/300/300?random=trending_${index}`,
+            source: 'deezer_trending',
+            deezer_id: track.id,
+            deezer_url: track.link,
+            preview_url: track.preview
+          }));
+        }
+      } catch (fallbackError) {
+        console.warn('❌ Deezer trending fallback failed:', fallbackError.message);
+      }
+    }
+    
+    // Final fallback if everything fails
+    if (recommendations.length === 0) {
+      console.log('🔄 Using static fallback recommendations');
       recommendations = [
         {
           id: 'rec_1',
@@ -258,7 +347,7 @@ router.get('/song/:id', [
           },
           duration: 200,
           preview: null,
-          link: null,
+          link: 'https://www.deezer.com',
           image: 'https://picsum.photos/300/300?random=1',
           source: 'fallback'
         },
@@ -274,9 +363,9 @@ router.get('/song/:id', [
             title: 'Divide',
             cover_medium: 'https://picsum.photos/300/300?random=2'
           },
-          duration: 235,
+          duration: 234,
           preview: null,
-          link: null,
+          link: 'https://www.deezer.com',
           image: 'https://picsum.photos/300/300?random=2',
           source: 'fallback'
         },
@@ -294,7 +383,7 @@ router.get('/song/:id', [
           },
           duration: 194,
           preview: null,
-          link: null,
+          link: 'https://www.deezer.com',
           image: 'https://picsum.photos/300/300?random=3',
           source: 'fallback'
         },
@@ -312,7 +401,7 @@ router.get('/song/:id', [
           },
           duration: 209,
           preview: null,
-          link: null,
+          link: 'https://www.deezer.com',
           image: 'https://picsum.photos/300/300?random=4',
           source: 'fallback'
         },
@@ -330,22 +419,22 @@ router.get('/song/:id', [
           },
           duration: 203,
           preview: null,
-          link: null,
+          link: 'https://www.deezer.com',
           image: 'https://picsum.photos/300/300?random=5',
           source: 'fallback'
         }
-      ];
+      ].slice(0, limit);
     }
 
-    console.log(`✅ Generated ${recommendations.length} song-based recommendations`);
+    console.log(`✅ Generated ${recommendations.length} recommendations for song ${id}`);
 
     res.status(200).json({
       status: 'success',
-      message: `Generated ${recommendations.length} recommendations based on song ${id}`,
+      message: `Generated ${recommendations.length} recommendations based on your selected song`,
       data: {
-        recommendations: recommendations.slice(0, limit),
+        recommendations,
         original_song_id: id,
-        limit: limit,
+        limit: parseInt(limit),
         source: recommendations[0]?.source || 'fallback'
       }
     });

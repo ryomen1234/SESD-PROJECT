@@ -57,11 +57,16 @@ const AudioPlayer = ({
       // Save to recently played if user is authenticated and we have track info
       if (isAuthenticated && user && title && artist && audioUrl) {
         try {
-          await saveRecentlyPlayed(user.uid, {
-            id: audioUrl, // Using audioUrl as ID for simplicity
+          await saveRecentlyPlayed({
+            userId: user.uid,
+            trackId: audioUrl, // Using audioUrl as ID for simplicity
             title,
             artist,
-            artwork: '', // We don't have artwork in this component
+            artwork: {
+              '150x150': '',
+              '480x480': '',
+              '1000x1000': ''
+            }, // Provide empty artwork object to match expected type
             duration: Math.round(duration),
             preview_url: audioUrl
           });
