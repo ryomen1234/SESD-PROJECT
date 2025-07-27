@@ -1,397 +1,375 @@
-import express from 'express';
-import { query, param, validationResult } from 'express-validator';
-import musicService from '../services/musicService.js';
-
+const express = require('express');
 const router = express.Router();
+const musicService = require('../services/musicService');
+const audiusService = require('../services/audiusService');
 
-// Validation middleware for error handling
-const handleValidationErrors = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      status: 'error',
-      message: 'Validation failed',
-      errors: errors.array()
-    });
-  }
-  next();
-};
-
-// GET /api/playlists/trending - Get trending playlists from Audius
-router.get('/trending', [
-  query('time')
-    .optional()
-    .isIn(['week', 'month', 'year', 'allTime'])
-    .withMessage('Time must be week, month, year, or allTime'),
-  query('offset')
-    .optional()
-    .isInt({ min: 0 })
-    .withMessage('Offset must be a positive integer'),
-  query('limit')
-    .optional()
-    .isInt({ min: 1, max: 100 })
-    .withMessage('Limit must be between 1 and 100'),
-  handleValidationErrors
-], async (req, res) => {
+router.get('/trending', async (req, res) => {
   try {
-    const { time = 'week', offset = 0, limit = 10 } = req.query;
-
-    console.log(`🎵 Fetching trending playlists: time=${time}, offset=${offset}, limit=${limit}`);
-    
-    // Add timeout to the entire request
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Request timeout')), 25000);
-    });
-
-    const apiPromise = musicService.getTrendingPlaylists(time, parseInt(offset), parseInt(limit));
-    
-    const result = await Promise.race([apiPromise, timeoutPromise]);
-
-    if (!result.success) {
-      console.error('❌ iTunes API failed:', result.error);
-      return res.status(500).json({
-        status: 'error',
-        message: 'Failed to fetch trending playlists from iTunes',
-        error: result.error
-      });
-    }
-
-    // Format playlists data
-    const formattedPlaylists = result.data?.data?.map(playlist => 
-      musicService.formatPlaylistData(playlist)
-    ) || [];
-
-    console.log(`✅ Successfully fetched ${formattedPlaylists.length} playlists`);
-
-    res.status(200).json({
+    const { limit = 20 } = req.query;
+    const playlists = await musicService.getTrendingPlaylists(parseInt(limit));
+    res.json({
       status: 'success',
-      message: `Retrieved ${result.count} trending playlists`,
-      data: {
-        playlists: formattedPlaylists,
-        pagination: {
-          offset: parseInt(offset),
-          limit: parseInt(limit),
-          total: result.count
-        },
-        filters: {
-          time
-        },
-        source: 'iTunes'
-      }
+      message: `Retrieved ${playlists.length} trending playlists`,
+      data: { playlists }
     });
-
   } catch (error) {
-    console.error('❌ Error in trending playlists endpoint:', error.message);
+    console.error('Error fetching trending playlists:', error);
     res.status(500).json({
       status: 'error',
-      message: 'Internal server error while fetching trending playlists',
+      message: 'Failed to fetch trending playlists',
       error: error.message
     });
   }
 });
 
-// GET /api/playlists/search - Search playlists on Audius
-router.get('/search', [
-  query('query')
-    .notEmpty()
-    .withMessage('Search query is required')
-    .isLength({ min: 1, max: 100 })
-    .withMessage('Search query must be between 1 and 100 characters'),
-  query('offset')
-    .optional()
-    .isInt({ min: 0 })
-    .withMessage('Offset must be a positive integer'),
-  query('limit')
-    .optional()
-    .isInt({ min: 1, max: 50 })
-    .withMessage('Limit must be between 1 and 50'),
-  handleValidationErrors
-], async (req, res) => {
+router.get('/search', async (req, res) => {
   try {
-    const { query: searchQuery, offset = 0, limit = 10 } = req.query;
-
-    console.log(`🔍 Searching playlists: query="${searchQuery}", offset=${offset}, limit=${limit}`);
+    const { query, limit = 20 } = req.query;
     
-    const result = await musicService.searchPlaylists(searchQuery, parseInt(offset), parseInt(limit));
-
-    if (!result.success) {
-      return res.status(500).json({
+    if (!query) {
+      return res.status(400).json({
         status: 'error',
-        message: 'Failed to search playlists on iTunes',
-        error: result.error
+        message: 'Search query is required'
       });
     }
 
-    // Format playlists data
-    const formattedPlaylists = result.data?.data?.map(playlist => 
-      musicService.formatPlaylistData(playlist)
-    ) || [];
-
-    res.status(200).json({
+    const playlists = await musicService.searchPlaylists(query, parseInt(limit));
+    res.json({
       status: 'success',
-      message: `Found ${result.count} playlists for "${searchQuery}"`,
-      data: {
-        playlists: formattedPlaylists,
-        pagination: {
-          offset: parseInt(offset),
-          limit: parseInt(limit),
-          total: result.count
-        },
-        search: {
-          query: searchQuery
-        },
-        source: 'iTunes'
-      }
+      message: `Found ${playlists.length} playlists for "${query}"`,
+      data: playlists
     });
-
   } catch (error) {
-    console.error('❌ Error in search playlists endpoint:', error.message);
+    console.error('Error searching playlists:', error);
     res.status(500).json({
       status: 'error',
-      message: 'Internal server error while searching playlists'
+      message: 'Failed to search playlists',
+      error: error.message
     });
   }
 });
 
-// GET /api/playlists/:id - Get specific playlist by ID
-router.get('/:id', [
-  param('id')
-    .notEmpty()
-    .withMessage('Playlist ID is required'),
-  handleValidationErrors
-], async (req, res) => {
+// New route for getting a specific playlist by ID
+router.get('/:playlistId', async (req, res) => {
   try {
-    const { id } = req.params;
-
-    console.log(`📋 Fetching playlist: id=${id}`);
+    const { playlistId } = req.params;
     
-    const result = await musicService.getPlaylistById(id);
-
-    if (!result.success) {
-      return res.status(404).json({
-        status: 'error',
-        message: `Playlist with ID ${id} not found`,
-        error: result.error
-      });
+    // Get the actual playlist from Deezer API
+    try {
+      const response = await fetch(`https://api.deezer.com/playlist/${playlistId}`);
+      const data = await response.json();
+      
+      if (data.id) {
+        // Get the playlist tracks
+        const tracksResponse = await fetch(`https://api.deezer.com/playlist/${playlistId}/tracks`);
+        const tracksData = await tracksResponse.json();
+        
+        const tracks = tracksData.data?.map((track, index) => ({
+          id: track.id,
+          title: track.title,
+          artist: track.artist.name,
+          duration: track.duration,
+          artwork: {
+            '150x150': track.album.cover_medium,
+            '480x480': track.album.cover_big,
+            '1000x1000': track.album.cover_xl
+          }
+        })) || [];
+        
+        const playlist = {
+          id: data.id,
+          name: data.title,
+          description: data.description || `A curated playlist by ${data.user.name}`,
+          tracks: tracks,
+          trackCount: tracks.length,
+          duration: tracks.reduce((total, track) => total + track.duration, 0),
+          artwork: tracks.length > 0 ? tracks[0].artwork : { '480x480': data.picture_big || data.picture_xl }
+        };
+        
+        res.json({
+          status: 'success',
+          message: 'Playlist retrieved successfully',
+          data: { playlist }
+        });
+        return;
+      }
+    } catch (error) {
+      console.log('Deezer API failed, using fallback');
     }
-
-    if (!result.data) {
-      return res.status(404).json({
-        status: 'error',
-        message: `Playlist with ID ${id} not found`
-      });
-    }
-
-    const formattedPlaylist = musicService.formatPlaylistData(result.data);
-
-    res.status(200).json({
+    
+    // Fallback to mock playlist
+    const mockPlaylist = {
+      id: playlistId,
+      name: `My Playlist ${playlistId.slice(-4)}`,
+      description: 'A curated playlist with amazing tracks',
+      tracks: [
+        {
+          id: '1',
+          title: 'NUEVAYOL',
+          artist: 'Bad Bunny',
+          duration: 183,
+          artwork: { '480x480': 'https://picsum.photos/480/480?random=1' }
+        },
+        {
+          id: '2',
+          title: 'Love Me Not',
+          artist: 'Ravyn Lenae',
+          duration: 213,
+          artwork: { '480x480': 'https://picsum.photos/480/480?random=2' }
+        },
+        {
+          id: '3',
+          title: 'Anxiety',
+          artist: 'Doechii',
+          duration: 195,
+          artwork: { '480x480': 'https://picsum.photos/480/480?random=3' }
+        }
+      ],
+      trackCount: 3,
+      duration: 591,
+      artwork: { '480x480': 'https://picsum.photos/480/480?random=playlist' }
+    };
+    
+    res.json({
       status: 'success',
       message: 'Playlist retrieved successfully',
-      data: {
-        playlist: formattedPlaylist,
-        source: 'iTunes'
-      }
+      data: { playlist: mockPlaylist }
     });
-
   } catch (error) {
-    console.error('❌ Error in get playlist endpoint:', error.message);
+    console.error('Error fetching playlist:', error);
     res.status(500).json({
       status: 'error',
-      message: 'Internal server error while fetching playlist'
+      message: 'Failed to fetch playlist',
+      error: error.message
     });
   }
 });
 
-// GET /api/playlists/:id/tracks - Get tracks from a specific playlist
-router.get('/:id/tracks', [
-  param('id')
-    .notEmpty()
-    .withMessage('Playlist ID is required'),
-  query('offset')
-    .optional()
-    .isInt({ min: 0 })
-    .withMessage('Offset must be a positive integer'),
-  query('limit')
-    .optional()
-    .isInt({ min: 1, max: 100 })
-    .withMessage('Limit must be between 1 and 100'),
-  handleValidationErrors
-], async (req, res) => {
+router.get('/:playlistId/tracks', async (req, res) => {
   try {
-    const { id } = req.params;
-    const { offset = 0, limit = 50 } = req.query;
-
-    console.log(`🎵 Fetching playlist tracks: id=${id}, offset=${offset}, limit=${limit}`);
+    const { playlistId } = req.params;
+    const { limit = 50, offset = 0 } = req.query;
     
-    const result = await musicService.getPlaylistTracks(id, parseInt(offset), parseInt(limit));
-
-    if (!result.success) {
-      return res.status(404).json({
-        status: 'error',
-        message: `Failed to fetch tracks for playlist ${id}`,
-        error: result.error
-      });
+    // First get playlist info from Deezer API
+    let playlistInfo = null;
+    try {
+      const playlistResponse = await fetch(`https://api.deezer.com/playlist/${playlistId}`);
+      const playlistData = await playlistResponse.json();
+      
+      if (playlistData.id) {
+        playlistInfo = {
+          id: playlistData.id,
+          name: playlistData.title,
+          description: playlistData.description,
+          artwork: {
+            '480x480': playlistData.picture_big || playlistData.picture_xl,
+            '150x150': playlistData.picture_medium
+          }
+        };
+      }
+    } catch (error) {
+      console.log('Failed to fetch playlist info from Deezer, using fallback');
     }
-
-    // Format tracks data
-    const formattedTracks = result.data?.data?.map(track => 
-      musicService.formatTrackData(track)
-    ) || [];
-
-    res.status(200).json({
+    
+    // Get tracks
+    const tracks = await musicService.getPlaylistTracks(playlistId, parseInt(limit), parseInt(offset));
+    
+    // If we couldn't get playlist info, create a fallback
+    if (!playlistInfo) {
+      playlistInfo = {
+        id: playlistId,
+        name: `Playlist ${playlistId}`,
+        description: 'A curated playlist with amazing tracks',
+        artwork: tracks.length > 0 ? tracks[0].artwork : { '480x480': 'https://picsum.photos/480/480?random=playlist' }
+      };
+    }
+    
+    res.json({
       status: 'success',
-      message: `Retrieved ${result.count} tracks from playlist ${id}`,
+      message: `Retrieved ${tracks.length} tracks from playlist`,
       data: {
-        playlistId: id,
-        tracks: formattedTracks,
-        pagination: {
-          offset: parseInt(offset),
-          limit: parseInt(limit),
-          total: result.count
-        },
-        source: 'iTunes'
+        playlist: playlistInfo,
+        tracks: tracks
       }
     });
-
   } catch (error) {
-    console.error('❌ Error in get playlist tracks endpoint:', error.message);
+    console.error('Error fetching playlist tracks:', error);
     res.status(500).json({
       status: 'error',
-      message: 'Internal server error while fetching playlist tracks'
+      message: 'Failed to fetch playlist tracks',
+      error: error.message
     });
   }
 });
 
-// GET /api/playlists - Get bulk playlists (with optional IDs filter)
-router.get('/', [
-  query('ids')
-    .optional()
-    .custom((value) => {
-      if (value) {
-        const ids = value.split(',');
-        if (ids.length > 50) {
-          throw new Error('Maximum 50 playlist IDs allowed');
+router.get('/recommendations/mood/:mood', async (req, res) => {
+  try {
+    const { mood } = req.params;
+    
+    const moodStrategies = {
+      workout: {
+        query: 'energy',
+        endpoint: 'search',
+        fallback: 'chart/464/tracks',
+        randomSeed: 1,
+        alternativeEndpoint: 'chart/464/tracks'
+      },
+      focus: {
+        query: 'instrumental',
+        endpoint: 'search',
+        fallback: 'chart/132/tracks',
+        randomSeed: 2,
+        alternativeEndpoint: 'chart/132/tracks'
+      },
+      sad: {
+        query: 'sad',
+        endpoint: 'search',
+        fallback: 'chart/0/tracks',
+        randomSeed: 3,
+        alternativeEndpoint: 'chart/0/tracks'
+      },
+      party: {
+        query: 'dance',
+        endpoint: 'search',
+        fallback: 'chart/132/tracks',
+        randomSeed: 4,
+        alternativeEndpoint: 'chart/132/tracks'
+      },
+      chill: {
+        query: 'relax',
+        endpoint: 'search',
+        fallback: 'chart/0/tracks',
+        randomSeed: 5,
+        alternativeEndpoint: 'chart/0/tracks'
+      },
+      upbeat: {
+        query: 'happy',
+        endpoint: 'search',
+        fallback: 'chart/132/tracks',
+        randomSeed: 6,
+        alternativeEndpoint: 'chart/132/tracks'
+      },
+      motivation: {
+        query: 'inspirational',
+        endpoint: 'search',
+        fallback: 'chart/464/tracks',
+        randomSeed: 7,
+        alternativeEndpoint: 'chart/464/tracks'
+      },
+      nostalgic: {
+        query: 'classic',
+        endpoint: 'search',
+        fallback: 'chart/0/tracks',
+        randomSeed: 8,
+        alternativeEndpoint: 'chart/0/tracks'
+      },
+      energetic: {
+        query: 'energetic',
+        endpoint: 'search',
+        fallback: 'chart/464/tracks',
+        randomSeed: 9,
+        alternativeEndpoint: 'chart/464/tracks'
+      },
+      mysterious: {
+        query: 'dark',
+        endpoint: 'search',
+        fallback: 'chart/0/tracks',
+        randomSeed: 10,
+        alternativeEndpoint: 'chart/0/tracks'
+      },
+      peaceful: {
+        query: 'calm',
+        endpoint: 'search',
+        fallback: 'chart/0/tracks',
+        randomSeed: 11,
+        alternativeEndpoint: 'chart/0/tracks'
+      },
+      adventurous: {
+        query: 'epic',
+        endpoint: 'search',
+        fallback: 'chart/0/tracks',
+        randomSeed: 12,
+        alternativeEndpoint: 'chart/0/tracks'
+      }
+    };
+    
+    const strategy = moodStrategies[mood.toLowerCase()] || { query: mood, endpoint: 'search', fallback: 'chart/0/tracks', randomSeed: 0, alternativeEndpoint: 'chart/0/tracks' };
+    
+    const moodOffsets = {
+      workout: 0, focus: 30, sad: 60, party: 90, chill: 120, upbeat: 150,
+      motivation: 180, nostalgic: 210, energetic: 240, mysterious: 270, peaceful: 300, adventurous: 330
+    };
+    
+    const offset = moodOffsets[mood.toLowerCase()] || 0;
+    
+    let data;
+    
+    try {
+      const response = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(strategy.query)}&limit=15&index=${offset}`);
+      data = await response.json();
+      
+      if (!data.data || data.data.length === 0) {
+        throw new Error('No search results');
+      }
+    } catch (error) {
+      console.log(`⚠️ Search failed for ${mood}, trying alternative endpoint with offset ${offset}`);
+      
+      const alternativeResponse = await fetch(`https://api.deezer.com/${strategy.alternativeEndpoint}?limit=15&index=${offset}`);
+      const alternativeData = await alternativeResponse.json();
+      
+      if (!alternativeData.data || alternativeData.data.length === 0) {
+        console.log(`⚠️ Alternative endpoint failed, using general trending for ${mood}`);
+        const finalFallbackResponse = await fetch(`https://api.deezer.com/chart/0/tracks?limit=15&index=${offset}`);
+        const finalFallbackData = await finalFallbackResponse.json();
+        
+        if (!finalFallbackData.data) {
+          throw new Error(`No tracks found for mood: ${mood}`);
         }
-        return ids.every(id => id.trim().length > 0);
+        
+        data = finalFallbackData;
+      } else {
+        data = alternativeData;
       }
-      return true;
-    })
-    .withMessage('Invalid playlist IDs format'),
-  query('offset')
-    .optional()
-    .isInt({ min: 0 })
-    .withMessage('Offset must be a positive integer'),
-  query('limit')
-    .optional()
-    .isInt({ min: 1, max: 100 })
-    .withMessage('Limit must be between 1 and 100'),
-  handleValidationErrors
-], async (req, res) => {
-  try {
-    const { ids, offset = 0, limit = 20 } = req.query;
-    const playlistIds = ids ? ids.split(',').map(id => id.trim()) : [];
-
-    console.log(`📋 Fetching bulk playlists: ids=${playlistIds.length ? playlistIds.join(',') : 'all'}, offset=${offset}, limit=${limit}`);
+    }
     
-    const result = await musicService.getBulkPlaylists(playlistIds);
+    const shuffledData = data.data.sort(() => 0.5 - Math.random());
+    
+    const limitedData = shuffledData.slice(0, 10);
+    
+    const recommendations = limitedData.map(track => ({
+      id: track.id,
+      name: track.title,
+      title: track.title,
+      artist: track.artist?.name || 'Unknown Artist',
+      artists: track.artist?.name || 'Unknown Artist',
+      albumArt: track.album?.cover_medium || track.album?.cover || null,
+      album_art_url: track.album?.cover_medium || track.album?.cover || null,
+      duration: track.duration || 0,
+      preview_url: track.preview || null,
+      preview: track.preview || null,
+      link: track.link || null,
+      artwork: {
+        '150x150': track.album?.cover_medium || track.album?.cover || null,
+        '480x480': track.album?.cover_big || track.album?.cover || null
+      }
+    }));
 
-    if (!result.success) {
-      return res.status(500).json({
-        status: 'error',
-        message: 'Failed to fetch playlists from iTunes',
-        error: result.error
-      });
-    }
-
-    // Format playlists data and apply client-side pagination if needed
-    let formattedPlaylists = result.data?.data?.map(playlist => 
-      musicService.formatPlaylistData(playlist)
-    ) || [];
-
-    // Apply pagination if no specific IDs were requested
-    if (!ids) {
-      const startIndex = parseInt(offset);
-      const endIndex = startIndex + parseInt(limit);
-      formattedPlaylists = formattedPlaylists.slice(startIndex, endIndex);
-    }
-
-    res.status(200).json({
+    res.json({
       status: 'success',
-      message: `Retrieved ${formattedPlaylists.length} playlists`,
+      message: `Generated ${recommendations.length} recommendations for ${mood} mood`,
       data: {
-        playlists: formattedPlaylists,
-        pagination: {
-          offset: parseInt(offset),
-          limit: parseInt(limit),
-          total: formattedPlaylists.length
-        },
-        filters: {
-          specificIds: playlistIds.length > 0 ? playlistIds : null
-        },
-        source: 'iTunes'
+        mood: mood,
+        recommendations: recommendations
       }
     });
-
   } catch (error) {
-    console.error('❌ Error in bulk playlists endpoint:', error.message);
+    console.error('Error generating mood recommendations:', error);
     res.status(500).json({
       status: 'error',
-      message: 'Internal server error while fetching playlists'
+      message: 'Failed to generate mood recommendations',
+      error: error.message
     });
   }
 });
 
-// TEST endpoint with mock data - for debugging connection issues
-router.get('/test', (req, res) => {
-  const mockPlaylists = [
-    {
-      id: 'test1',
-      name: 'Test Playlist 1',
-      description: 'This is a test playlist to verify connection',
-      user: { id: 'test', name: 'Test User', handle: 'testuser' },
-      artwork: { '480x480': 'https://picsum.photos/480/480?random=1' },
-      trackCount: 15,
-      favoriteCount: 100,
-      repostCount: 25
-    },
-    {
-      id: 'test2', 
-      name: 'Test Playlist 2',
-      description: 'Another test playlist',
-      user: { id: 'test2', name: 'Test User 2', handle: 'testuser2' },
-      artwork: { '480x480': 'https://picsum.photos/480/480?random=2' },
-      trackCount: 22,
-      favoriteCount: 200,
-      repostCount: 50
-    }
-  ];
-
-  res.status(200).json({
-    status: 'success',
-    message: 'Test endpoint working - connection is good!',
-    data: {
-      playlists: mockPlaylists,
-      pagination: { offset: 0, limit: 10, total: 2 },
-      source: 'Mock Data'
-    }
-  });
-});
-
-// Health check endpoint for playlist service
-router.get('/health/check', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    message: 'Playlist service is healthy',
-    timestamp: new Date().toISOString(),
-    endpoints: [
-      'GET /api/playlists/test - Test endpoint with mock data',
-      'GET /api/playlists/trending - Get trending playlists',
-      'GET /api/playlists/search - Search playlists',
-      'GET /api/playlists/:id - Get specific playlist',
-      'GET /api/playlists/:id/tracks - Get playlist tracks',
-      'GET /api/playlists - Get bulk playlists'
-    ]
-  });
-});
-
-export default router; 
+module.exports = router; 
