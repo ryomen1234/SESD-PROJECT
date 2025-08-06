@@ -232,13 +232,27 @@ const AudioAlchemist = () => {
     }
 
     try {
+      const tracks = playlist.map(song => ({
+        id: song.id,
+        title: song.title,
+        artist: song.artist,
+        artwork: song.artwork || {
+          '150x150': song.albumArt || '',
+          '480x480': song.albumArt || '',
+          '1000x1000': song.albumArt || ''
+        },
+        duration: song.duration || 0,
+        preview_url: song.preview_url || null,
+        deezer_url: song.deezer_url || null
+      }));
+
       await savePlaylist({
         name: playlistName,
         description: `Generated with Audio Alchemist.`,
-        tracks: playlist,
-        duration: playlist.reduce((sum, track) => sum + (track.duration || 0), 0),
-        trackCount: playlist.length,
-        artwork: playlist[0]?.artwork,
+        tracks: tracks,
+        duration: tracks.reduce((sum, track) => sum + track.duration, 0),
+        trackCount: tracks.length,
+        artwork: tracks[0]?.artwork,
         genre: 'Mixed',
         mood: 'Custom',
         source: 'audio-alchemist',
