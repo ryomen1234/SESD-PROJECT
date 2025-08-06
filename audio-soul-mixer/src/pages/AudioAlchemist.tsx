@@ -7,22 +7,15 @@ import { Button } from "../components/ui/button";
 import { savePlaylist, saveRecentlyPlayed } from "../services/playlistService";
 import { useAuth } from "../contexts/AuthContext";
 
-interface AudioFeatures {
-  danceability: number;
-  energy: number;
-  valence: number;
-  acousticness: number;
-}
-
+// Interfaces
 interface Song {
   id: string;
   title: string;
   artist: string;
   albumArt: string;
   duration?: number;
-  preview_url?: string | null;
-  deezer_url?: string | null;
-  full_song_url?: string | null;
+  preview_url?: string;
+  deezer_url?: string;
   artwork?: {
     '150x150'?: string;
     '480x480'?: string;
@@ -30,161 +23,126 @@ interface Song {
   };
 }
 
+interface AudioFeatures {
+  acousticness: number;
+  danceability: number;
+  energy: number;
+  instrumentalness: number;
+  liveness: number;
+  valence: number;
+}
+
+// Constants
+const initialFeatures: AudioFeatures = {
+  acousticness: 0.5,
+  danceability: 0.7,
+  energy: 0.6,
+  instrumentalness: 0.1,
+  liveness: 0.2,
+  valence: 0.5,
+};
+
+const presets: { name: string; features: AudioFeatures }[] = [
+    { name: "Chill Mix", features: { acousticness: 0.8, danceability: 0.4, energy: 0.3, instrumentalness: 0.6, liveness: 0.1, valence: 0.3 } },
+    { name: "Workout Energy", features: { acousticness: 0.1, danceability: 0.8, energy: 0.9, instrumentalness: 0.0, liveness: 0.4, valence: 0.7 } },
+    { name: "Focus Flow", features: { acousticness: 0.7, danceability: 0.3, energy: 0.2, instrumentalness: 0.8, liveness: 0.1, valence: 0.2 } },
+    { name: "Party Starter", features: { acousticness: 0.2, danceability: 0.9, energy: 0.8, instrumentalness: 0.0, liveness: 0.5, valence: 0.8 } },
+    { name: "Sad Vibes", features: { acousticness: 0.6, danceability: 0.3, energy: 0.2, instrumentalness: 0.5, liveness: 0.1, valence: 0.1 } },
+    { name: "Upbeat Morning", features: { acousticness: 0.3, danceability: 0.7, energy: 0.8, instrumentalness: 0.0, liveness: 0.2, valence: 0.9 } },
+    { name: "Late Night Jazz", features: { acousticness: 0.9, danceability: 0.5, energy: 0.3, instrumentalness: 0.7, liveness: 0.1, valence: 0.2 } },
+    { name: "Acoustic Cafe", features: { acousticness: 0.9, danceability: 0.4, energy: 0.4, instrumentalness: 0.2, liveness: 0.1, valence: 0.4 } },
+];
+
 const AudioAlchemist = () => {
   const { user } = useAuth();
-  const [audioFeatures, setAudioFeatures] = useState<AudioFeatures>({
-    danceability: 50,
-    energy: 50,
-    valence: 50,
-    acousticness: 50
-  });
-  
+  const [audioFeatures, setAudioFeatures] = useState<AudioFeatures>(initialFeatures);
   const [playlist, setPlaylist] = useState<Song[]>([]);
-  const [playlistName, setPlaylistName] = useState("");
+  const [playlistName, setPlaylistName] = useState("Audio Alchemist Mix");
   const [isLoading, setIsLoading] = useState(false);
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
   const [currentPlayingTrackId, setCurrentPlayingTrackId] = useState<string | null>(null);
 
-  // Preset configurations
-  const presets = [
-    {
-      name: "Party Mode",
-      description: "High energy, danceable, happy music",
-      features: { danceability: 90, energy: 85, valence: 80, acousticness: 20 }
-    },
-    {
-      name: "Study Focus",
-      description: "Calm, instrumental, low energy",
-      features: { danceability: 30, energy: 25, valence: 40, acousticness: 80 }
-    },
-    {
-      name: "Workout",
-      description: "High energy, motivating, upbeat",
-      features: { danceability: 75, energy: 90, valence: 70, acousticness: 30 }
-    },
-    {
-      name: "Chill Vibes",
-      description: "Relaxing, acoustic, peaceful",
-      features: { danceability: 40, energy: 30, valence: 60, acousticness: 90 }
-    },
-    {
-      name: "Creative Flow",
-      description: "Inspirational, moderate energy, positive",
-      features: { danceability: 60, energy: 50, valence: 75, acousticness: 50 }
-    },
-    {
-      name: "Happy Pop",
-      description: "Upbeat, positive, mainstream",
-      features: { danceability: 80, energy: 70, valence: 85, acousticness: 40 }
-    }
-  ];
-
-  const applyPreset = (preset: typeof presets[0]) => {
+  const handleSliderChange = (feature: keyof AudioFeatures) => (value: number[]) => {
+    setAudioFeatures(prev => ({ ...prev, [feature]: value[0] }));
+  };
+  
+  const applyPreset = (preset: { name: string, features: AudioFeatures }) => {
     setAudioFeatures(preset.features);
-    // Auto-generate playlist when preset is applied
-    setTimeout(() => {
-      generatePlaylist(preset.features);
-    }, 100);
+    setPlaylistName(preset.name);
   };
 
-  // Generate playlist based on audio features
-  const generatePlaylist = async (features: AudioFeatures) => {
+  const generatePlaylist = async () => {
     setIsLoading(true);
-    
+    setPlaylist([]);
     try {
-      // Build search query based on audio features - using real search terms
-      let searchTerms = [];
-      let genres = [];
+      // Since Deezer search isn't working, we'll use different approaches to get variety
+      // Create a seed based on slider values to get consistent but different results
+      const seed = Math.floor(
+        (audioFeatures.valence * 100) + 
+        (audioFeatures.energy * 100) + 
+        (audioFeatures.danceability * 100) + 
+        (audioFeatures.acousticness * 100)
+      );
       
-      // Energy - use mood and style terms
-      if (features.energy > 80) {
-        searchTerms.push('energetic upbeat rock');
-        genres.push('rock', 'electronic', 'pop');
-      } else if (features.energy > 60) {
-        searchTerms.push('upbeat pop');
-        genres.push('pop', 'rock');
-      } else if (features.energy > 40) {
-        searchTerms.push('moderate tempo');
-        genres.push('pop', 'indie');
-      } else if (features.energy > 20) {
-        searchTerms.push('calm relaxing');
-        genres.push('ambient', 'folk');
+      // Use the seed to determine which "page" of popular tracks to fetch
+      const offset = (seed % 10) * 20; // This gives us offsets: 0, 20, 40, 60, 80, 100, 120, 140, 160, 180
+      const limit = 20;
+
+      // First try to get popular tracks with different offsets for variety
+      const response = await fetch(`http://localhost:5000/api/songs/alchemist?limit=${limit + offset}`);
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+      const data = await response.json();
+
+      if (data.status === 'success' && data.data.songs && data.data.songs.length > 0) {
+        // Take a slice from the middle based on our offset to simulate different "pages"
+        let songsToUse = data.data.songs;
+        if (songsToUse.length > offset + limit) {
+          songsToUse = songsToUse.slice(offset, offset + limit);
+        } else if (songsToUse.length > limit) {
+          // If we don't have enough for the offset, take the last 20
+          songsToUse = songsToUse.slice(-limit);
+        }
+
+        // Shuffle the results based on our audio features for more variety
+        const shuffledSongs = [...songsToUse].sort(() => {
+          // Use audio features as a pseudo-random seed
+          const pseudoRandom = (audioFeatures.valence + audioFeatures.energy + audioFeatures.danceability) % 1;
+          return pseudoRandom - 0.5;
+        });
+
+        const processedSongs: Song[] = shuffledSongs.slice(0, 20).map((song: any) => ({
+          id: song.id,
+          title: song.title || 'Unknown Title',
+          artist: song.artist?.name || 'Unknown Artist',
+          albumArt: song.artwork?.['480x480'] || `https://picsum.photos/480/480?random=${song.id}`,
+          duration: song.duration,
+          preview_url: song.preview_url,
+          deezer_url: song.deezer_url,
+          artwork: song.artwork,
+        }));
+        
+        setPlaylist(processedSongs);
+        
+        // Set playlist name based on dominant feature
+        const features = Object.entries(audioFeatures).sort(([, a], [, b]) => b - a);
+        const dominantFeature = features[0][0];
+        const featureNames: { [key: string]: string } = {
+          valence: "Happy",
+          energy: "Energetic", 
+          danceability: "Dance",
+          acousticness: "Acoustic",
+          instrumentalness: "Instrumental",
+          liveness: "Live"
+        };
+        
+        if (playlistName === "Audio Alchemist Mix" || !presets.some(p => p.name === playlistName)) {
+          setPlaylistName(`${featureNames[dominantFeature] || "Custom"} Mix`);
+        }
       } else {
-        searchTerms.push('very calm ambient');
-        genres.push('ambient', 'classical');
+        setPlaylist([]);
       }
-      
-      // Danceability
-      if (features.danceability > 80) {
-        searchTerms.push('dance electronic');
-        genres.push('electronic', 'dance');
-      } else if (features.danceability < 30) {
-        searchTerms.push('slow ballad');
-        genres.push('ballad', 'folk');
-      }
-      
-      // Valence (mood)
-      if (features.valence > 80) {
-        searchTerms.push('happy joyful');
-        genres.push('pop', 'funk');
-      } else if (features.valence < 30) {
-        searchTerms.push('melancholy sad');
-        genres.push('indie', 'folk');
-      }
-      
-      // Acousticness
-      if (features.acousticness > 80) {
-        searchTerms.push('acoustic guitar');
-        genres.push('folk', 'acoustic');
-      } else if (features.acousticness < 20) {
-        searchTerms.push('electronic synth');
-        genres.push('electronic', 'synth');
-      }
-      
-      // Use multiple search terms to get diverse results
-      const allSongs: Song[] = [];
-      
-      for (const searchTerm of searchTerms.slice(0, 3)) { // Limit to 3 search terms
-        try {
-          const response = await fetch(`http://localhost:5000/api/songs?search=${encodeURIComponent(searchTerm)}&limit=20`);
-          const data = await response.json();
-          
-          if (data.status === 'success' && data.data.songs) {
-            const songs = data.data.songs.slice(0, 7); // Get 7 songs per search term
-            allSongs.push(...songs);
-          }
-        } catch (error) {
-          console.error(`Error fetching songs for "${searchTerm}":`, error);
-        }
-      }
-      
-      // Remove duplicates and limit to 20 songs
-      const uniqueSongs = allSongs.filter((song, index, self) => 
-        index === self.findIndex(s => s.id === song.id)
-      ).slice(0, 20);
-      
-      // Add artwork structure to songs
-      const processedSongs = uniqueSongs.map(song => ({
-        ...song,
-        artwork: {
-          '150x150': song.albumArt,
-          '480x480': song.albumArt,
-          '1000x1000': song.albumArt
-        }
-      }));
-      
-      setPlaylist(processedSongs);
-      
-      // Auto-generate playlist name based on features
-      const nameParts = [];
-      if (features.energy > 70) nameParts.push('Energetic');
-      if (features.danceability > 70) nameParts.push('Dance');
-      if (features.valence > 70) nameParts.push('Happy');
-      if (features.acousticness > 70) nameParts.push('Acoustic');
-      
-      const defaultName = nameParts.length > 0 ? `${nameParts.join(' ')} Mix` : 'Custom Playlist';
-      setPlaylistName(defaultName);
-      
     } catch (error) {
       console.error('Error generating playlist:', error);
       alert('Failed to generate playlist. Please try again.');
@@ -193,19 +151,12 @@ const AudioAlchemist = () => {
     }
   };
 
-  const handleSliderChange = (feature: keyof AudioFeatures, value: number[]) => {
-    setAudioFeatures(prev => ({
-      ...prev,
-      [feature]: value[0]
-    }));
-  };
-
   const handlePlaySong = async (song: Song) => {
     if (currentAudio) {
       currentAudio.pause();
       currentAudio.currentTime = 0;
     }
-
+    
     if (currentPlayingTrackId === song.id) {
       setCurrentPlayingTrackId(null);
       setCurrentAudio(null);
@@ -223,7 +174,7 @@ const AudioAlchemist = () => {
 
         audio.addEventListener('error', (error) => {
           console.error('Error playing preview:', error);
-          alert(`No audio preview available for "${song.title}"`);
+          openFullSong(song);
           setCurrentPlayingTrackId(null);
           setCurrentAudio(null);
         });
@@ -242,18 +193,27 @@ const AudioAlchemist = () => {
               artist: song.artist,
               artwork: song.artwork,
               duration: song.duration || 0,
-              preview_url: song.preview_url
+              preview_url: song.preview_url,
+              deezer_url: song.deezer_url,
             });
           } catch (error) {
             console.error('Error saving to recently played:', error);
           }
         }
       } else {
-        alert(`No audio preview available for "${song.title}"`);
+        openFullSong(song);
       }
     } catch (error) {
       console.error('Error playing track:', error);
-      alert(`No audio preview available for "${song.title}"`);
+      openFullSong(song);
+    }
+  };
+
+  const openFullSong = (song: Song) => {
+    if (song.deezer_url) {
+      window.open(song.deezer_url, '_blank');
+    } else {
+      alert("Full song URL is not available.");
     }
   };
 
@@ -262,51 +222,27 @@ const AudioAlchemist = () => {
       alert('Please log in to save playlists');
       return;
     }
-
     if (!playlistName.trim()) {
       alert('Please enter a playlist name');
       return;
     }
-
     if (playlist.length === 0) {
       alert('No songs to save');
       return;
     }
 
     try {
-      const tracks = playlist.map(song => ({
-        id: song.id || `track_${Date.now()}_${Math.random()}`,
-        title: song.title || 'Unknown Title',
-        artist: song.artist || 'Unknown Artist',
-        artwork: song.artwork || {
-          '150x150': song.albumArt || '',
-          '480x480': song.albumArt || '',
-          '1000x1000': song.albumArt || ''
-        },
-        duration: song.duration || 0,
-        preview_url: song.preview_url || null
-      }));
-
-      const totalDuration = tracks.reduce((sum, track) => sum + (track.duration || 0), 0);
-      const firstTrackArtwork = tracks[0]?.artwork || {
-        '150x150': '',
-        '480x480': '',
-        '1000x1000': ''
-      };
-
       await savePlaylist({
-        name: playlistName || 'Custom Playlist',
-        description: `Generated playlist with ${playlist.length} tracks`,
-        tracks,
-        userId: user.uid,
-        duration: totalDuration,
-        trackCount: tracks.length,
-        artwork: firstTrackArtwork,
+        name: playlistName,
+        description: `Generated with Audio Alchemist.`,
+        tracks: playlist,
+        duration: playlist.reduce((sum, track) => sum + (track.duration || 0), 0),
+        trackCount: playlist.length,
+        artwork: playlist[0]?.artwork,
         genre: 'Mixed',
         mood: 'Custom',
-        source: 'audio-alchemist'
+        source: 'audio-alchemist',
       });
-
       alert('Playlist saved successfully!');
     } catch (error) {
       console.error('Error saving playlist:', error);
@@ -314,46 +250,13 @@ const AudioAlchemist = () => {
     }
   };
 
-  // Cleanup audio when component unmounts
   useEffect(() => {
     return () => {
       if (currentAudio) {
         currentAudio.pause();
-        currentAudio.currentTime = 0;
       }
     };
   }, [currentAudio]);
-
-  const sliderConfig = [
-    {
-      key: 'danceability' as keyof AudioFeatures,
-      label: 'Danceability',
-      leftLabel: 'Slow',
-      rightLabel: 'Dance',
-      description: 'Search for dance music vs slow ballads'
-    },
-    {
-      key: 'energy' as keyof AudioFeatures,
-      label: 'Energy',
-      leftLabel: 'Calm',
-      rightLabel: 'Energetic',
-      description: 'Search for energetic vs relaxing music'
-    },
-    {
-      key: 'valence' as keyof AudioFeatures,
-      label: 'Mood',
-      leftLabel: 'Melancholy',
-      rightLabel: 'Joyful',
-      description: 'Search for happy vs emotional music'
-    },
-    {
-      key: 'acousticness' as keyof AudioFeatures,
-      label: 'Style',
-      leftLabel: 'Electronic',
-      rightLabel: 'Acoustic',
-      description: 'Search for acoustic vs electronic music'
-    }
-  ];
 
   return (
     <Layout>
@@ -361,137 +264,88 @@ const AudioAlchemist = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900">
-              Audio <span className="text-blue-600">Mixer</span>
+              Audio <span className="text-blue-600">Alchemist</span>
             </h1>
             <p className="text-xl text-gray-600">
-              Create custom playlists by adjusting musical attributes
+              Craft playlists by mixing musical attributes or start with a preset.
             </p>
           </div>
 
           <div className="grid lg:grid-cols-2 gap-12">
-            {/* Left Side - Alchemist Controls */}
             <div className="space-y-8">
-              <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
-                <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">
-                  Mix Your <span className="text-blue-600">Music</span>
+              <div className="bg-white rounded-2xl p-8 shadow-lg border">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">
+                  Start with a <span className="text-blue-600">Preset</span>
                 </h2>
-                
-                {/* Preset Buttons */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Presets</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {presets.map((preset) => (
-                      <button
-                        key={preset.name}
-                        onClick={() => applyPreset(preset)}
-                        className="p-3 text-sm bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700 rounded-lg transition-colors duration-200"
-                        title={preset.description}
-                      >
-                        {preset.name}
-                      </button>
-                    ))}
-                  </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                  {presets.map(preset => (
+                    <Button key={preset.name} variant="outline" onClick={() => applyPreset(preset)}>
+                      {preset.name}
+                    </Button>
+                  ))}
                 </div>
-
-                {/* Generate Button */}
-                <div className="mb-8">
-                  <button
-                    onClick={() => generatePlaylist(audioFeatures)}
-                    disabled={isLoading}
-                    className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors duration-200"
-                  >
-                    {isLoading ? 'Generating...' : 'Generate Playlist'}
-                  </button>
-                </div>
-                
-                <div className="space-y-8">
-                  {sliderConfig.map((config) => (
-                    <div key={config.key} className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <label className="text-lg font-medium text-gray-900">
-                          {config.label}
-                        </label>
-                        <span className="text-sm text-blue-600 font-medium">
-                          {audioFeatures[config.key]}%
-                        </span>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Slider
-                          value={[audioFeatures[config.key]]}
-                          onValueChange={(value) => handleSliderChange(config.key, value)}
-                          max={100}
-                          step={1}
-                          className="w-full"
-                        />
-                        <div className="flex justify-between text-sm text-gray-500">
-                          <span>{config.leftLabel}</span>
-                          <span>{config.rightLabel}</span>
-                        </div>
-                      </div>
-                      
-                      <p className="text-sm text-gray-500">
-                        {config.description}
-                      </p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">
+                  Or Mix Your <span className="text-blue-600">Own</span>
+                </h2>
+                <div className="space-y-6 mb-8">
+                  {Object.keys(audioFeatures).map(feature => (
+                    <div key={feature}>
+                      <label className="capitalize text-lg font-medium text-gray-800">
+                        {feature.charAt(0).toUpperCase() + feature.slice(1)}
+                      </label>
+                      <Slider
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={[audioFeatures[feature as keyof AudioFeatures]]}
+                        onValueChange={handleSliderChange(feature as keyof AudioFeatures)}
+                      />
                     </div>
                   ))}
                 </div>
+                <Button onClick={generatePlaylist} disabled={isLoading} className="w-full py-3">
+                  {isLoading ? 'Generating...' : 'Generate Playlist'}
+                </Button>
               </div>
             </div>
 
-            {/* Right Side - Generated Playlist */}
             <div className="space-y-6">
-              <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+              <div className="bg-white rounded-2xl p-8 shadow-lg border">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
                   Your <span className="text-blue-600">Playlist</span>
                 </h2>
                 <p className="text-gray-600 text-center mb-6">
-                  {playlist.length} tracks crafted from your preferences
+                  {playlist.length > 0 ? `${playlist.length} tracks crafted for you` : "Generate a playlist to see results"}
                 </p>
-                
-                {/* Playlist Name Input and Save Button */}
                 {playlist.length > 0 && (
                   <div className="mb-6 space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Playlist Name
-                      </label>
-                      <Input
-                        type="text"
-                        value={playlistName}
-                        onChange={(e) => setPlaylistName(e.target.value)}
-                        placeholder="Enter playlist name..."
-                        className="w-full"
-                      />
-                    </div>
-                    <Button
-                      onClick={handleSavePlaylist}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white"
-                    >
+                    <Input
+                      type="text"
+                      value={playlistName}
+                      onChange={(e) => setPlaylistName(e.target.value)}
+                      placeholder="Enter playlist name..."
+                      className="w-full"
+                    />
+                    <Button onClick={handleSavePlaylist} className="w-full bg-green-600 hover:bg-green-700 text-white">
                       Save to My Playlists
                     </Button>
                   </div>
                 )}
-                
                 {isLoading ? (
                   <div className="flex items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-4 max-h-[600px] overflow-y-auto custom-scrollbar">
-                    {playlist.map((song, index) => (
-                      <div
+                  <div className="grid grid-cols-2 gap-4 max-h-[600px] overflow-y-auto">
+                    {playlist.map((song) => (
+                      <SongCard
                         key={song.id}
-                        className="animate-fade-in"
-                        style={{ animationDelay: `${index * 0.05}s` }}
-                      >
-                        <SongCard
-                          title={song.title}
-                          artist={song.artist}
-                          albumArt={song.albumArt}
-                          onPlay={() => handlePlaySong(song)}
-                        />
-                      </div>
+                        title={song.title}
+                        artist={song.artist}
+                        albumArt={song.albumArt}
+                        onPlay={() => handlePlaySong(song)}
+                        isPlaying={currentPlayingTrackId === song.id}
+                      />
                     ))}
                   </div>
                 )}

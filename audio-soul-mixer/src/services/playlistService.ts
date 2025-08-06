@@ -65,13 +65,27 @@ export interface RecentlyPlayed {
   };
   duration: number;
   preview_url?: string;
+  deezer_url?: string;
   playedAt: Timestamp;
 }
 
-export async function savePlaylist(playlist: Omit<SavedPlaylist, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+export async function savePlaylist(playlist: Omit<SavedPlaylist, 'id' | 'createdAt' | 'updatedAt' | 'userId'>): Promise<string> {
   try {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Ensure all tracks have a deezer_url
+    const tracksWithDeezerUrl = playlist.tracks.map(track => ({
+      ...track,
+      deezer_url: track.deezer_url || null,
+    }));
+
     const playlistData = {
       ...playlist,
+      tracks: tracksWithDeezerUrl,
+      userId: user.uid,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now()
     };

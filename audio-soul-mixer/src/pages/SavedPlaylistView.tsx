@@ -101,7 +101,6 @@ const SavedPlaylistView: React.FC = () => {
     }
 
     try {
-      // Use the existing preview_url that was saved with the track
       if (track.preview_url) {
         const audio = new Audio(track.preview_url);
         
@@ -111,7 +110,7 @@ const SavedPlaylistView: React.FC = () => {
         });
 
         audio.addEventListener('error', () => {
-          alert(`No audio preview available for "${track.title}". Use the external link to listen to the full song.`);
+          openFullSong(track);
           setCurrentPlayingTrackId(null);
           setCurrentAudio(null);
         });
@@ -129,18 +128,27 @@ const SavedPlaylistView: React.FC = () => {
               artist: track.artist,
               artwork: typeof track.artwork === 'string' ? { '480x480': track.artwork } : track.artwork,
               duration: track.duration,
-              preview_url: track.preview_url
+              preview_url: track.preview_url,
+              deezer_url: track.deezer_url
             });
           } catch (error) {
             console.error('Error saving to recently played:', error);
           }
         }
       } else {
-        alert(`No audio preview available for "${track.title}". Use the external link to listen to the full song.`);
+        openFullSong(track);
       }
     } catch (error) {
       console.error('Error playing track:', error);
-      alert(`No audio preview available for "${track.title}". Use the external link to listen to the full song.`);
+      openFullSong(track);
+    }
+  };
+
+  const openFullSong = (track: PlaylistTrack) => {
+    if (track.deezer_url) {
+      window.open(track.deezer_url, '_blank');
+    } else {
+      alert("Full song URL is not available.");
     }
   };
 
@@ -297,18 +305,6 @@ const SavedPlaylistView: React.FC = () => {
                         <Play className="h-4 w-4" />
                       )}
                     </button>
-
-                    {track.full_song_url && (
-                      <a
-                        href={track.full_song_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2 rounded-full bg-gray-600 text-white hover:bg-gray-700 transition-colors"
-                        title="Listen full song"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    )}
                   </div>
                 </div>
               </div>

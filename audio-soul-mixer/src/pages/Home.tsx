@@ -73,7 +73,8 @@ const Home = () => {
     }
   };
 
-  const playTrack = async (track: RecentlyPlayed) => {
+  const playTrack = async (track: RecentlyPlayed, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (currentAudio) {
       currentAudio.pause();
       currentAudio.currentTime = 0;
@@ -95,7 +96,7 @@ const Home = () => {
         });
 
         audio.addEventListener('error', () => {
-          alert(`No audio preview available for "${track.title}". Use the external link to listen to the full song.`);
+          openFullSong(track);
           setCurrentPlayingTrackId(null);
           setCurrentAudio(null);
         });
@@ -104,11 +105,19 @@ const Home = () => {
         setCurrentAudio(audio);
         setCurrentPlayingTrackId(track.id);
       } else {
-        alert(`No audio preview available for "${track.title}". Use the external link to listen to the full song.`);
+        openFullSong(track);
       }
     } catch (error) {
       console.error('Error playing track:', error);
-      alert(`No audio preview available for "${track.title}". Use the external link to listen to the full song.`);
+      openFullSong(track);
+    }
+  };
+
+  const openFullSong = (track: RecentlyPlayed) => {
+    if (track.deezer_url) {
+      window.open(track.deezer_url, '_blank');
+    } else {
+      alert("Full song URL is not available.");
     }
   };
 
@@ -236,8 +245,9 @@ const Home = () => {
                         viewport={{ once: true }}
                         transition={{ delay: index * 0.1, duration: 0.5 }}
                         className="group cursor-pointer"
+                        onClick={(e) => playTrack(track, e)}
                       >
-                        <Card className="bg-white border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300" onClick={() => playTrack(track)}>
+                        <Card className="bg-white border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300">
                           <CardContent className="p-4">
                             <div className="aspect-square mb-3 relative overflow-hidden rounded-lg">
                               <img 

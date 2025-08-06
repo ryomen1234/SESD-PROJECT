@@ -287,37 +287,44 @@ const RecommendBySong: React.FC = () => {
 
   // Function to handle song playback
   const handlePlaySong = (song: any) => {
-    console.log('🎵 Playing song:', song);
-    
-    // Stop any currently playing audio
+    if (currentPlayingTrackId === song.id) {
+      if (currentAudio) {
+        currentAudio.pause();
+        setCurrentAudio(null);
+        setCurrentPlayingTrackId(null);
+      }
+      return;
+    }
+
     if (currentAudio) {
       currentAudio.pause();
-      setCurrentAudio(null);
-      setCurrentPlayingTrackId(null);
     }
-    
-    // Try to play the song using Deezer preview URL
-    if (song.preview_url || song.preview) {
-      const audioUrl = song.preview_url || song.preview;
-      console.log('🔊 Playing preview URL:', audioUrl);
-      
+
+    const audioUrl = song.preview_url || song.preview;
+    if (audioUrl) {
       const audio = new Audio(audioUrl);
       audio.addEventListener('ended', () => {
         setCurrentAudio(null);
         setCurrentPlayingTrackId(null);
       });
-      
+
       audio.play().then(() => {
         setCurrentAudio(audio);
         setCurrentPlayingTrackId(song.id);
-        console.log('✅ Song started playing');
       }).catch((error) => {
         console.error('❌ Failed to play song:', error);
-        alert('Preview not available for this song');
+        openFullSong(song);
       });
     } else {
-      console.log('❌ No preview URL available');
-      alert('Preview not available for this song');
+      openFullSong(song);
+    }
+  };
+
+  const openFullSong = (song: any) => {
+    if (song.deezer_url) {
+      window.open(song.deezer_url, '_blank');
+    } else {
+      alert("Full song URL is not available.");
     }
   };
 

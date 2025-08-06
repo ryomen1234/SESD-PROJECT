@@ -263,8 +263,7 @@ async function getPlaylistTracks(playlistId, limit = 50, offset = 0) {
       created_at: new Date().toISOString(),
       album: track.album?.title || 'Unknown Album',
       preview_url: track.preview || null,
-      deezer_url: track.link,
-      full_song_url: `https://www.youtube.com/results?search_query=${encodeURIComponent(`${track.title} ${track.artist.name} official audio`)}`
+      deezer_url: track.link
     }));
     
     return tracks;
@@ -332,8 +331,7 @@ async function searchIndianMusic(query = 'bollywood', limit = 20) {
       created_at: new Date().toISOString(),
       album: track.album?.title || 'Unknown Album',
       preview_url: track.preview || null,
-      deezer_url: track.link,
-      full_song_url: `https://www.youtube.com/results?search_query=${encodeURIComponent(`${track.title} ${track.artist.name} official audio`)}`
+      deezer_url: track.link
     }));
     
     return tracks;
@@ -415,84 +413,98 @@ async function getJamendoTracks(limit = 20) {
 async function searchSongs(query, limit = 20) {
   try {
     const response = await fetch(`${DEEZER_API_BASE}/search?q=${encodeURIComponent(query)}&limit=${limit}`);
-    const data = await response.json();
-    
-    if (!data.data) {
-      throw new Error('No songs found');
+    if (!response.ok) {
+      console.error(`Deezer API error: ${response.status} ${response.statusText}`);
+      return [];
     }
-    
-    const songs = data.data.map((track, index) => ({
-      id: track.id,
-      title: track.title,
-      artist: {
-        id: track.artist.id,
-        name: track.artist.name,
-        handle: track.artist.name.toLowerCase().replace(/\s+/g, '_')
-      },
-      artwork: {
-        '150x150': track.album?.cover_medium || track.album?.cover || `https://picsum.photos/150/150?random=search${index}`,
-        '480x480': track.album?.cover_big || track.album?.cover_xl || `https://picsum.photos/480/480?random=search${index}`,
-        '1000x1000': track.album?.cover_xl || track.album?.cover_big || `https://picsum.photos/1000/1000?random=search${index}`
-      },
-      duration: track.duration,
-      genre: 'Pop',
-      mood: 'Energetic',
-      play_count: Math.floor(Math.random() * 10000) + 1000,
-      favorite_count: Math.floor(Math.random() * 1000) + 100,
-      repost_count: Math.floor(Math.random() * 100) + 10,
-      created_at: new Date().toISOString(),
-      album: track.album?.title || 'Unknown Album',
-      preview_url: track.preview || null,
-      deezer_url: track.link,
-      full_song_url: `https://www.youtube.com/results?search_query=${encodeURIComponent(`${track.title} ${track.artist.name} official audio`)}`
-    }));
-    
+    const data = await response.json();
+
+    if (!data.data || !Array.isArray(data.data)) {
+      console.warn('⚠️ No songs found in Deezer search response.');
+      return [];
+    }
+
+    const songs = data.data
+      .map((track) => {
+        // Robust data validation to prevent crashes
+        if (!track || !track.id || !track.title || !track.artist || !track.artist.name || !track.album || !track.album.cover_medium) {
+          console.warn('Skipping malformed search track from Deezer:', track);
+          return null;
+        }
+        return {
+          id: track.id,
+          title: track.title,
+          artist: {
+            id: track.artist.id,
+            name: track.artist.name,
+            handle: track.artist.name.toLowerCase().replace(/\s+/g, '_')
+          },
+          artwork: {
+            '150x150': track.album.cover_medium,
+            '480x480': track.album.cover_big,
+            '1000x1000': track.album.cover_xl
+          },
+          duration: track.duration,
+          preview_url: track.preview || null,
+          deezer_url: track.link,
+          album: track.album.title || 'Unknown Album',
+        };
+      })
+      .filter(Boolean); // Filter out any null entries
+
     return songs;
   } catch (error) {
-    console.error('Error searching songs:', error);
-    return [];
+    console.error('❌ Error searching songs:', error);
+    return []; // Always return an array
   }
 }
 
 async function getPopularTracks(limit = 20) {
   try {
     const response = await fetch(`${DEEZER_API_BASE}/chart/0/tracks?limit=${limit}`);
-    const data = await response.json();
-    
-    if (!data.data) {
-      throw new Error('No popular tracks found');
+    if (!response.ok) {
+      console.error(`Deezer API error: ${response.status} ${response.statusText}`);
+      return [];
     }
-    
-    const tracks = data.data.map((track, index) => ({
-      id: track.id,
-      title: track.title,
-      artist: {
-        id: track.artist.id,
-        name: track.artist.name,
-        handle: track.artist.name.toLowerCase().replace(/\s+/g, '_')
-      },
-      artwork: {
-        '150x150': track.album?.cover_medium || track.album?.cover || `https://picsum.photos/150/150?random=popular${index}`,
-        '480x480': track.album?.cover_big || track.album?.cover_xl || `https://picsum.photos/480/480?random=popular${index}`,
-        '1000x1000': track.album?.cover_xl || track.album?.cover_big || `https://picsum.photos/1000/1000?random=popular${index}`
-      },
-      duration: track.duration,
-      genre: 'Pop',
-      mood: 'Energetic',
-      play_count: Math.floor(Math.random() * 10000) + 1000,
-      favorite_count: Math.floor(Math.random() * 1000) + 100,
-      repost_count: Math.floor(Math.random() * 100) + 10,
-      created_at: new Date().toISOString(),
-      album: track.album?.title || 'Unknown Album',
-      preview_url: track.preview || null,
-      deezer_url: track.link,
-      full_song_url: `https://www.youtube.com/results?search_query=${encodeURIComponent(`${track.title} ${track.artist.name} official audio`)}`
-    }));
-    
+    const data = await response.json();
+
+    if (!data.data || !Array.isArray(data.data)) {
+      console.warn('⚠️ No popular tracks data found in Deezer response.');
+      return [];
+    }
+
+    const tracks = data.data
+      .map((track) => {
+        // Robust data validation to prevent crashes. Skip any track with incomplete data.
+        if (!track || !track.id || !track.title || !track.artist || !track.artist.name || !track.album || !track.album.cover_medium) {
+          console.warn('Skipping malformed track from Deezer:', track);
+          return null;
+        }
+        return {
+          id: track.id,
+          title: track.title,
+          artist: {
+            id: track.artist.id,
+            name: track.artist.name,
+            handle: track.artist.name.toLowerCase().replace(/\s+/g, '_')
+          },
+          artwork: {
+            '150x150': track.album.cover_medium,
+            '480x480': track.album.cover_big,
+            '1000x1000': track.album.cover_xl
+          },
+          duration: track.duration,
+          preview_url: track.preview || null,
+          deezer_url: track.link,
+          album: track.album.title || 'Unknown Album',
+        };
+      })
+      .filter(Boolean); // Filter out any null entries from bad data
+
     return tracks;
   } catch (error) {
-    console.error('Error fetching popular tracks:', error);
-    return [];
+    console.error('❌ Error fetching popular tracks:', error);
+    return []; // Always return an array to prevent further errors
   }
 }
 
