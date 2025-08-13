@@ -10,7 +10,7 @@ def get_logger(name: str, file_name: str = "logs.log") -> logging.Logger:
        logger = logging.getLogger(name)
        logger.setLevel(logging.DEBUG)
 
-       if not logging.handlers:
+       if not logger.handlers:
               file_logger = logging.FileHandler(log_file_path)
               console_logger = logging.StreamHandler()
 

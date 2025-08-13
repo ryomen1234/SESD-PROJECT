@@ -1,37 +1,11 @@
 import pandas as pd
 import numpy as np
 import os
-import logging
+from utils.logs import get_logger
 
 
-# ensure that logs directory exists
-logs_dir = "logs"
-os.makedirs(logs_dir, exist_ok=True)
 
-# define logger
-logger = logging.getLogger("data_ingestion")
-logger.setLevel(logging.DEBUG)
-
-# define console handler
-console_logger = logging.StreamHandler()
-console_logger.setLevel(logging.DEBUG)
-
-# define file handler
-log_file_path = os.path.join(logs_dir, 'data_ingestion.log')
-file_logger = logging.FileHandler(log_file_path)
-file_logger.setLevel(logging.DEBUG)
-
-# define formatter (corrected '%(asctime)s')
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-# set formatter
-console_logger.setFormatter(formatter)
-file_logger.setFormatter(formatter)
-
-# add handlers to logger
-logger.addHandler(console_logger)
-logger.addHandler(file_logger)
-
+logger = get_logger(__name__, file_name='data_injestion.log')
 
 def load_data(url: str) -> pd.DataFrame:
     '''this function load data from url and return dataframe'''

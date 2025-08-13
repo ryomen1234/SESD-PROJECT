@@ -1,0 +1,1 @@
+1.remove : track_id, track_name, genre, artist
