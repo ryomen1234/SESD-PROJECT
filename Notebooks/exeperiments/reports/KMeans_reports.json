@@ -1,0 +1,9 @@
+{
+    "algorithm": "KMeans",
+    "parameter": {
+        "n-cluster": 3,
+        "max_iter": 100
+    },
+    "Silhouette Score": 0.15360692177320157,
+    "calinski_harabasz_score": 4650.705012167394
+}

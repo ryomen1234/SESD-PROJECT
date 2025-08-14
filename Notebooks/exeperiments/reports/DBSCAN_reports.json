@@ -1,0 +1,6 @@
+{
+    "algorithm": " DBSCAN",
+    "parameter": "default",
+    "Silhouette Score": -0.4165179705724261,
+    "calinski_harabasz_score": 6.905748302538726
+}

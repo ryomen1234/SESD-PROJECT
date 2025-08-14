@@ -1,0 +1,8 @@
+{
+    "algorithm": "AgglomerativeClustering",
+    "parameter": {
+        "n-cluster": 3
+    },
+    "Silhouette Score": 0.16238037764653832,
+    "calinski_harabasz_score": 4594.646457244154
+}
