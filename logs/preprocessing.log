@@ -1,0 +1,12 @@
+2025-08-14 10:04:38,794 - __main__ - INFO - data preprocessign started.
+2025-08-14 10:04:38,950 - __main__ - INFO - data loaded successfullyE:\TY\SESD\SESD-PROJECT\data\clean_data\clean_data_set2.csv
+2025-08-14 10:04:38,967 - __main__ - INFO - index column remived.
+2025-08-14 10:04:38,967 - __main__ - INFO - created instance of StandardScaler.
+2025-08-14 10:04:39,070 - __main__ - INFO - data transformation is done./nbefore transformation: (114000, 15)/nafter transformation: (114000, 15)
+2025-08-14 10:04:39,075 - __main__ - INFO - clean data stored in data/clean_data
+2025-08-14 10:07:29,421 - __main__ - INFO - Data preprocessing started.
+2025-08-14 10:07:29,559 - __main__ - INFO - Data loaded successfully from E:\TY\SESD\SESD-PROJECT\data\clean_data\clean_data_set2.csv
+2025-08-14 10:07:29,572 - __main__ - INFO - 'index' column removed.
+2025-08-14 10:07:29,573 - __main__ - INFO - Created instance of StandardScaler.
+2025-08-14 10:07:29,678 - __main__ - INFO - Data transformation completed. Before: (114000, 15), After: (114000, 15)
+2025-08-14 10:07:29,693 - __main__ - INFO - Clean data saved to data\clean_data\train_data.npy
