@@ -1,0 +1,13 @@
+2025-08-15 21:30:47,772 - __main__ - INFO - Model training started.
+2025-08-15 21:30:48,258 - __main__ - INFO - Model trained and returned.
+2025-08-15 21:37:35,050 - __main__ - INFO - Model training started.
+2025-08-15 21:37:37,501 - __main__ - INFO - Model trained and returned.
+2025-08-15 21:39:23,734 - __main__ - INFO - Models folder created: E:\TY\SESD\SESD-PROJECT\models
+2025-08-15 21:39:23,742 - __main__ - INFO - Data loaded from: E:\TY\SESD\SESD-PROJECT\data\clean_data\train_data.npy
+ Type: float64
+ Shape: (114000, 15)
+2025-08-15 21:39:23,743 - __main__ - INFO - Model training started.
+2025-08-15 21:39:25,706 - __main__ - INFO - Model trained and returned.
+2025-08-15 21:39:25,706 - __main__ - INFO - Model trained successfully.
+2025-08-15 21:39:25,715 - __main__ - INFO - Saving model to: E:\TY\SESD\SESD-PROJECT\models\model_v0.0.pkl
+2025-08-15 21:39:25,717 - __main__ - INFO - Model saved successfully.
