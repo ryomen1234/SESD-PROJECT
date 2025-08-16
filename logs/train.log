@@ -11,3 +11,75 @@
 2025-08-15 21:39:25,706 - __main__ - INFO - Model trained successfully.
 2025-08-15 21:39:25,715 - __main__ - INFO - Saving model to: E:\TY\SESD\SESD-PROJECT\models\model_v0.0.pkl
 2025-08-15 21:39:25,717 - __main__ - INFO - Model saved successfully.
+2025-08-16 12:22:27,889 - __main__ - INFO - Models folder created: E:\TY\SESD\SESD-PROJECT\models
+2025-08-16 12:22:27,902 - __main__ - INFO - Data loaded from: E:\TY\SESD\SESD-PROJECT\data\clean_data\train_data.npy
+ Type: float64
+ Shape: (114000, 15)
+2025-08-16 12:22:27,902 - __main__ - INFO - Model training started.
+2025-08-16 12:22:29,823 - __main__ - INFO - Time elapsed to train model: 1.9205784797668457.
+2025-08-16 12:22:29,823 - __main__ - INFO - Model trained successfully.
+2025-08-16 12:22:29,823 - __main__ - INFO - Saving model to: E:\TY\SESD\SESD-PROJECT\models\model_v0.0.pkl
+2025-08-16 12:22:29,824 - __main__ - ERROR - Unexpected error occurred: [Errno 2] No such file or directory: 'E:\\TY\\SESD\\SESD-PROJECT\\music-store\\mudic_data.csv'
+Traceback (most recent call last):
+  File "E:\TY\SESD\SESD-PROJECT\src\models\train.py", line 82, in main
+    df = pd.read_csv(df_path)
+         ^^^^^^^^^^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\io\parsers\readers.py", line 1026, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\io\parsers\readers.py", line 620, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\io\parsers\readers.py", line 1620, in __init__
+    self._engine = self._make_engine(f, self.engine)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\io\parsers\readers.py", line 1880, in _make_engine
+    self.handles = get_handle(
+                   ^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\io\common.py", line 873, in get_handle
+    handle = open(
+             ^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'E:\\TY\\SESD\\SESD-PROJECT\\music-store\\mudic_data.csv'
+2025-08-16 12:23:19,099 - __main__ - INFO - Models folder created: E:\TY\SESD\SESD-PROJECT\models
+2025-08-16 12:23:19,107 - __main__ - INFO - Data loaded from: E:\TY\SESD\SESD-PROJECT\data\clean_data\train_data.npy
+ Type: float64
+ Shape: (114000, 15)
+2025-08-16 12:23:19,107 - __main__ - INFO - Model training started.
+2025-08-16 12:23:20,755 - __main__ - INFO - Time elapsed to train model: 1.6473276615142822.
+2025-08-16 12:23:20,755 - __main__ - INFO - Model trained successfully.
+2025-08-16 12:23:20,756 - __main__ - INFO - Saving model to: E:\TY\SESD\SESD-PROJECT\models\model_v0.0.pkl
+2025-08-16 12:23:20,757 - __main__ - ERROR - Unexpected error occurred: [Errno 2] No such file or directory: 'E:\\TY\\SESD\\SESD-PROJECT\\music-store\\mudic_data.csv'
+Traceback (most recent call last):
+  File "E:\TY\SESD\SESD-PROJECT\src\models\train.py", line 82, in main
+    df = pd.read_csv(df_path)
+         ^^^^^^^^^^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\io\parsers\readers.py", line 1026, in read_csv
+    return _read(filepath_or_buffer, kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\io\parsers\readers.py", line 620, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\io\parsers\readers.py", line 1620, in __init__
+    self._engine = self._make_engine(f, self.engine)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\io\parsers\readers.py", line 1880, in _make_engine
+    self.handles = get_handle(
+                   ^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\io\common.py", line 873, in get_handle
+    handle = open(
+             ^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'E:\\TY\\SESD\\SESD-PROJECT\\music-store\\mudic_data.csv'
+2025-08-16 12:24:10,933 - __main__ - INFO - Models folder created: E:\TY\SESD\SESD-PROJECT\models
+2025-08-16 12:24:10,939 - __main__ - INFO - Data loaded from: E:\TY\SESD\SESD-PROJECT\data\clean_data\train_data.npy
+ Type: float64
+ Shape: (114000, 15)
+2025-08-16 12:24:10,939 - __main__ - INFO - Model training started.
+2025-08-16 12:24:12,577 - __main__ - INFO - Time elapsed to train model: 1.6376125812530518.
+2025-08-16 12:24:12,577 - __main__ - INFO - Model trained successfully.
+2025-08-16 12:24:12,577 - __main__ - INFO - Saving model to: E:\TY\SESD\SESD-PROJECT\models\model_v0.0.pkl
+2025-08-16 12:24:12,649 - __main__ - INFO - labels predicted/nlabels shape: (114000,)
+2025-08-16 12:26:09,068 - __main__ - INFO - metrics computed successfully./nsilhouette_score: 0.10449204119751837/ncalinski_harabasz_score: 13307.391213176152
+2025-08-16 12:26:09,070 - __main__ - INFO - labels concatenated with dataframe.
+2025-08-16 12:26:09,070 - __main__ - INFO - Model evaluat successfull.
+2025-08-16 12:26:09,186 - __main__ - INFO - music-list saved successfully in: E:\TY\SESD\SESD-PROJECT\music-store
+2025-08-16 12:26:09,188 - __main__ - INFO - Model saved successfully.
