@@ -70,7 +70,7 @@ def main():
         
         data_path = r'E:\TY\SESD\SESD-PROJECT\data\clean_data\train_data.npy'
         train_data = np.load(data_path)
-        logger.info(f"Data loaded from: {data_path}\n Type: {train_data.dtype}\n Shape: {train_data.shape}")
+        logger.info(f"Data loaded from: {data_path}/n Type: {train_data.dtype}/n Shape: {train_data.shape}")
         
         model = train_model(train_data)
         logger.info("Model trained successfully.")

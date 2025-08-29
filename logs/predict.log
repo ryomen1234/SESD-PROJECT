@@ -1,0 +1,64 @@
+2025-08-27 21:55:01,167 - __main__ - INFO - Data loaded successfully from E:\TY\SESD\SESD-PROJECT\music-store\music_list.csv
+2025-08-27 21:55:01,167 - __main__ - INFO - Song 'Comedy' belongs to cluster: 1
+2025-08-27 21:55:01,167 - __main__ - INFO - Cluster size: 34828
+2025-08-27 21:55:01,167 - __main__ - ERROR - Error during recommendation generation: "None of [Index(['danceability', 'energy', 'loudness', 'speechiness', 'acousticness',\n       'instrumentalness', 'liveness', 'valence', 'tempo'],\n      dtype='object')] are in the [columns]"
+Traceback (most recent call last):
+  File "E:\TY\SESD\SESD-PROJECT\src\models\pred.py", line 33, in get_top_10_recommendations
+    cluster_features = cluster_songs[feature_cols]
+                       ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\core\frame.py", line 4113, in __getitem__
+    indexer = self.columns._get_indexer_strict(key, "columns")[1]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\core\indexes\base.py", line 6212, in _get_indexer_strict
+    self._raise_if_missing(keyarr, indexer, axis_name)
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\core\indexes\base.py", line 6261, in _raise_if_missing
+    raise KeyError(f"None of [{key}] are in the [{axis_name}]")
+KeyError: "None of [Index(['danceability', 'energy', 'loudness', 'speechiness', 'acousticness',\n       'instrumentalness', 'liveness', 'valence', 'tempo'],\n      dtype='object')] are in the [columns]"
+2025-08-27 21:55:01,187 - __main__ - ERROR - Unexpected error in prediction script: "None of [Index(['danceability', 'energy', 'loudness', 'speechiness', 'acousticness',\n       'instrumentalness', 'liveness', 'valence', 'tempo'],\n      dtype='object')] are in the [columns]"
+Traceback (most recent call last):
+  File "E:\TY\SESD\SESD-PROJECT\src\models\pred.py", line 72, in main
+    top_10 = get_top_10_recommendations(song_name, df, feature_cols)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\src\models\pred.py", line 33, in get_top_10_recommendations
+    cluster_features = cluster_songs[feature_cols]
+                       ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\core\frame.py", line 4113, in __getitem__
+    indexer = self.columns._get_indexer_strict(key, "columns")[1]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\core\indexes\base.py", line 6212, in _get_indexer_strict
+    self._raise_if_missing(keyarr, indexer, axis_name)
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\core\indexes\base.py", line 6261, in _raise_if_missing
+    raise KeyError(f"None of [{key}] are in the [{axis_name}]")
+KeyError: "None of [Index(['danceability', 'energy', 'loudness', 'speechiness', 'acousticness',\n       'instrumentalness', 'liveness', 'valence', 'tempo'],\n      dtype='object')] are in the [columns]"
+2025-08-27 21:57:33,235 - __main__ - INFO - Data loaded successfully from E:\TY\SESD\SESD-PROJECT\music-store\music_list.csv
+2025-08-27 21:57:33,256 - __main__ - INFO - Song 'Comedy' belongs to cluster: 1
+2025-08-27 21:57:33,258 - __main__ - INFO - Cluster size: 34828
+2025-08-27 21:57:33,259 - __main__ - ERROR - Error during recommendation generation: "None of [Index(['popularity', 'duration_ms', 'explicit', 'danceability', 'energy',\n       'key', 'loudness', 'mode', 'speechiness', 'acousticness',\n       'instrumentalness', 'liveness', 'valence', 'tempo', 'time_signature'],\n      dtype='object')] are in the [columns]"
+Traceback (most recent call last):
+  File "E:\TY\SESD\SESD-PROJECT\src\models\pred.py", line 33, in get_top_10_recommendations
+    cluster_features = cluster_songs[feature_cols]
+                       ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\core\frame.py", line 4113, in __getitem__
+    indexer = self.columns._get_indexer_strict(key, "columns")[1]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\core\indexes\base.py", line 6212, in _get_indexer_strict
+    self._raise_if_missing(keyarr, indexer, axis_name)
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\core\indexes\base.py", line 6261, in _raise_if_missing
+    raise KeyError(f"None of [{key}] are in the [{axis_name}]")
+KeyError: "None of [Index(['popularity', 'duration_ms', 'explicit', 'danceability', 'energy',\n       'key', 'loudness', 'mode', 'speechiness', 'acousticness',\n       'instrumentalness', 'liveness', 'valence', 'tempo', 'time_signature'],\n      dtype='object')] are in the [columns]"
+2025-08-27 21:57:33,260 - __main__ - ERROR - Unexpected error in prediction script: "None of [Index(['popularity', 'duration_ms', 'explicit', 'danceability', 'energy',\n       'key', 'loudness', 'mode', 'speechiness', 'acousticness',\n       'instrumentalness', 'liveness', 'valence', 'tempo', 'time_signature'],\n      dtype='object')] are in the [columns]"
+Traceback (most recent call last):
+  File "E:\TY\SESD\SESD-PROJECT\src\models\pred.py", line 71, in main
+    top_10 = get_top_10_recommendations(song_name, df, feature_cols)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\src\models\pred.py", line 33, in get_top_10_recommendations
+    cluster_features = cluster_songs[feature_cols]
+                       ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\core\frame.py", line 4113, in __getitem__
+    indexer = self.columns._get_indexer_strict(key, "columns")[1]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\core\indexes\base.py", line 6212, in _get_indexer_strict
+    self._raise_if_missing(keyarr, indexer, axis_name)
+  File "E:\TY\SESD\SESD-PROJECT\env2\Lib\site-packages\pandas\core\indexes\base.py", line 6261, in _raise_if_missing
+    raise KeyError(f"None of [{key}] are in the [{axis_name}]")
+KeyError: "None of [Index(['popularity', 'duration_ms', 'explicit', 'danceability', 'energy',\n       'key', 'loudness', 'mode', 'speechiness', 'acousticness',\n       'instrumentalness', 'liveness', 'valence', 'tempo', 'time_signature'],\n      dtype='object')] are in the [columns]"
