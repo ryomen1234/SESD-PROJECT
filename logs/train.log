@@ -83,3 +83,7 @@ FileNotFoundError: [Errno 2] No such file or directory: 'E:\\TY\\SESD\\SESD-PROJ
 2025-08-16 12:26:09,070 - __main__ - INFO - Model evaluat successfull.
 2025-08-16 12:26:09,186 - __main__ - INFO - music-list saved successfully in: E:\TY\SESD\SESD-PROJECT\music-store
 2025-08-16 12:26:09,188 - __main__ - INFO - Model saved successfully.
+2025-08-29 12:36:02,539 - __main__ - INFO - User selected song index: 4
+2025-08-29 12:36:02,694 - __main__ - INFO - Data loaded successfully from E:\TY\SESD\SESD-PROJECT\music-store\mudic_recommedation_list_4.csv (shape: (89380, 5))
+2025-08-29 12:36:02,694 - __main__ - INFO - Song label fetched successfully: 0
+2025-08-29 12:36:02,710 - __main__ - INFO - 10 songs fetched successfully from cluster with label 0
